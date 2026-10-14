@@ -1,0 +1,185 @@
+{
+ "sampleRate": 44100,
+ "strikes": [
+  {
+   "start": 0,
+   "duration": 0.3,
+   "tone": 0
+  },
+  {
+   "start": 0.35,
+   "duration": 0.3,
+   "tone": 0.029
+  },
+  {
+   "start": 0.7,
+   "duration": 0.3,
+   "tone": 0.057
+  },
+  {
+   "start": 1.05,
+   "duration": 0.3,
+   "tone": 0.086
+  },
+  {
+   "start": 1.4,
+   "duration": 0.3,
+   "tone": 0.114
+  },
+  {
+   "start": 1.75,
+   "duration": 0.3,
+   "tone": 0.143
+  },
+  {
+   "start": 2.1,
+   "duration": 0.3,
+   "tone": 0.171
+  },
+  {
+   "start": 2.45,
+   "duration": 0.3,
+   "tone": 0.2
+  },
+  {
+   "start": 2.8,
+   "duration": 0.3,
+   "tone": 0.229
+  },
+  {
+   "start": 3.15,
+   "duration": 0.3,
+   "tone": 0.257
+  },
+  {
+   "start": 3.5,
+   "duration": 0.3,
+   "tone": 0.286
+  },
+  {
+   "start": 3.85,
+   "duration": 0.3,
+   "tone": 0.314
+  },
+  {
+   "start": 4.2,
+   "duration": 0.3,
+   "tone": 0.343
+  },
+  {
+   "start": 4.55,
+   "duration": 0.3,
+   "tone": 0.371
+  },
+  {
+   "start": 4.9,
+   "duration": 0.3,
+   "tone": 0.4
+  },
+  {
+   "start": 5.25,
+   "duration": 0.3,
+   "tone": 0.429
+  },
+  {
+   "start": 5.6,
+   "duration": 0.3,
+   "tone": 0.457
+  },
+  {
+   "start": 5.95,
+   "duration": 0.3,
+   "tone": 0.486
+  },
+  {
+   "start": 6.3,
+   "duration": 0.3,
+   "tone": 0.514
+  },
+  {
+   "start": 6.65,
+   "duration": 0.3,
+   "tone": 0.543
+  },
+  {
+   "start": 7,
+   "duration": 0.3,
+   "tone": 0.571
+  },
+  {
+   "start": 7.35,
+   "duration": 0.3,
+   "tone": 0.6
+  },
+  {
+   "start": 7.7,
+   "duration": 0.3,
+   "tone": 0.629
+  },
+  {
+   "start": 8.05,
+   "duration": 0.3,
+   "tone": 0.657
+  },
+  {
+   "start": 8.4,
+   "duration": 0.3,
+   "tone": 0.686
+  },
+  {
+   "start": 8.75,
+   "duration": 0.3,
+   "tone": 0.714
+  },
+  {
+   "start": 9.1,
+   "duration": 0.3,
+   "tone": 0.743
+  },
+  {
+   "start": 9.45,
+   "duration": 0.3,
+   "tone": 0.771
+  },
+  {
+   "start": 9.8,
+   "duration": 0.3,
+   "tone": 0.8
+  },
+  {
+   "start": 10.15,
+   "duration": 0.3,
+   "tone": 0.829
+  },
+  {
+   "start": 10.5,
+   "duration": 0.3,
+   "tone": 0.857
+  },
+  {
+   "start": 10.85,
+   "duration": 0.3,
+   "tone": 0.886
+  },
+  {
+   "start": 11.2,
+   "duration": 0.3,
+   "tone": 0.914
+  },
+  {
+   "start": 11.55,
+   "duration": 0.3,
+   "tone": 0.943
+  },
+  {
+   "start": 11.9,
+   "duration": 0.3,
+   "tone": 0.971
+  },
+  {
+   "start": 12.25,
+   "duration": 0.3,
+   "tone": 1
+  }
+ ]
+}

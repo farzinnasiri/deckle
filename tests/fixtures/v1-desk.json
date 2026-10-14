@@ -1,0 +1,394 @@
+{
+  "version": 1,
+  "active": {
+    "version": 1,
+    "id": "064af0cb-9ea6-486a-b2b3-20cb7717fc42",
+    "created": 1791465636897,
+    "torn": null,
+    "discardedAt": null,
+    "continuedFrom": [],
+    "events": [
+      {
+        "version": 1,
+        "id": "4910c68b-bbab-458a-a6eb-22204c6392e0",
+        "at": 1791465636898,
+        "action": "type",
+        "key": "A draft on the machine.\n",
+        "seed": 2482661319,
+        "density": 0.9733333333333333,
+        "mode": "draft"
+      }
+    ],
+    "document": {
+      "marks": [
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-0",
+          "text": "A",
+          "kind": "glyph",
+          "seed": 2482661319,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-1",
+          "text": " ",
+          "kind": "glyph",
+          "seed": 2482669238,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-2",
+          "text": "d",
+          "kind": "glyph",
+          "seed": 2482677157,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-3",
+          "text": "r",
+          "kind": "glyph",
+          "seed": 2482685076,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-4",
+          "text": "a",
+          "kind": "glyph",
+          "seed": 2482692995,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-5",
+          "text": "f",
+          "kind": "glyph",
+          "seed": 2482700914,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-6",
+          "text": "t",
+          "kind": "glyph",
+          "seed": 2482708833,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-7",
+          "text": " ",
+          "kind": "glyph",
+          "seed": 2482716752,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-8",
+          "text": "o",
+          "kind": "glyph",
+          "seed": 2482724671,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-9",
+          "text": "n",
+          "kind": "glyph",
+          "seed": 2482732590,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-10",
+          "text": " ",
+          "kind": "glyph",
+          "seed": 2482740509,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-11",
+          "text": "t",
+          "kind": "glyph",
+          "seed": 2482748428,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-12",
+          "text": "h",
+          "kind": "glyph",
+          "seed": 2482756347,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-13",
+          "text": "e",
+          "kind": "glyph",
+          "seed": 2482764266,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-14",
+          "text": " ",
+          "kind": "glyph",
+          "seed": 2482772185,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-15",
+          "text": "m",
+          "kind": "glyph",
+          "seed": 2482780104,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-16",
+          "text": "a",
+          "kind": "glyph",
+          "seed": 2482788023,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-17",
+          "text": "c",
+          "kind": "glyph",
+          "seed": 2482795942,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-18",
+          "text": "h",
+          "kind": "glyph",
+          "seed": 2482803861,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-19",
+          "text": "i",
+          "kind": "glyph",
+          "seed": 2482811780,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-20",
+          "text": "n",
+          "kind": "glyph",
+          "seed": 2482819699,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-21",
+          "text": "e",
+          "kind": "glyph",
+          "seed": 2482827618,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-22",
+          "text": ".",
+          "kind": "glyph",
+          "seed": 2482835537,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        },
+        {
+          "id": "4910c68b-bbab-458a-a6eb-22204c6392e0-23",
+          "text": "\n",
+          "kind": "glyph",
+          "seed": 2482843456,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        }
+      ],
+      "cursor": 24
+    }
+  },
+  "pieces": [
+    {
+      "version": 1,
+      "id": "68b341c0-1615-4012-9dcd-9917bc57a92f",
+      "created": 1791465636899,
+      "torn": 1791370800000,
+      "discardedAt": null,
+      "continuedFrom": [],
+      "events": [
+        {
+          "version": 1,
+          "id": "3d7aefda-4ed6-4c99-b61c-b1530146dd03",
+          "at": 1791465636899,
+          "action": "type",
+          "key": "Filed in ink.",
+          "seed": 1366519458,
+          "density": 0.9733333333333333,
+          "mode": "ink"
+        },
+        {
+          "version": 1,
+          "id": "bd02ae1b-285d-482e-8960-5163eeddab51",
+          "at": 1791465636899,
+          "action": "paste",
+          "key": "A clipping\nTwo lines",
+          "seed": 3373643129,
+          "density": 0.9733333333333333,
+          "mode": "draft"
+        }
+      ],
+      "document": {
+        "marks": [
+          {
+            "id": "3d7aefda-4ed6-4c99-b61c-b1530146dd03-0",
+            "text": "F",
+            "kind": "glyph",
+            "seed": 1366519458,
+            "density": 0.9733333333333333,
+            "mode": "ink"
+          },
+          {
+            "id": "3d7aefda-4ed6-4c99-b61c-b1530146dd03-1",
+            "text": "i",
+            "kind": "glyph",
+            "seed": 1366527377,
+            "density": 0.9733333333333333,
+            "mode": "ink"
+          },
+          {
+            "id": "3d7aefda-4ed6-4c99-b61c-b1530146dd03-2",
+            "text": "l",
+            "kind": "glyph",
+            "seed": 1366535296,
+            "density": 0.9733333333333333,
+            "mode": "ink"
+          },
+          {
+            "id": "3d7aefda-4ed6-4c99-b61c-b1530146dd03-3",
+            "text": "e",
+            "kind": "glyph",
+            "seed": 1366543215,
+            "density": 0.9733333333333333,
+            "mode": "ink"
+          },
+          {
+            "id": "3d7aefda-4ed6-4c99-b61c-b1530146dd03-4",
+            "text": "d",
+            "kind": "glyph",
+            "seed": 1366551134,
+            "density": 0.9733333333333333,
+            "mode": "ink"
+          },
+          {
+            "id": "3d7aefda-4ed6-4c99-b61c-b1530146dd03-5",
+            "text": " ",
+            "kind": "glyph",
+            "seed": 1366559053,
+            "density": 0.9733333333333333,
+            "mode": "ink"
+          },
+          {
+            "id": "3d7aefda-4ed6-4c99-b61c-b1530146dd03-6",
+            "text": "i",
+            "kind": "glyph",
+            "seed": 1366566972,
+            "density": 0.9733333333333333,
+            "mode": "ink"
+          },
+          {
+            "id": "3d7aefda-4ed6-4c99-b61c-b1530146dd03-7",
+            "text": "n",
+            "kind": "glyph",
+            "seed": 1366574891,
+            "density": 0.9733333333333333,
+            "mode": "ink"
+          },
+          {
+            "id": "3d7aefda-4ed6-4c99-b61c-b1530146dd03-8",
+            "text": " ",
+            "kind": "glyph",
+            "seed": 1366582810,
+            "density": 0.9733333333333333,
+            "mode": "ink"
+          },
+          {
+            "id": "3d7aefda-4ed6-4c99-b61c-b1530146dd03-9",
+            "text": "i",
+            "kind": "glyph",
+            "seed": 1366590729,
+            "density": 0.9733333333333333,
+            "mode": "ink"
+          },
+          {
+            "id": "3d7aefda-4ed6-4c99-b61c-b1530146dd03-10",
+            "text": "n",
+            "kind": "glyph",
+            "seed": 1366598648,
+            "density": 0.9733333333333333,
+            "mode": "ink"
+          },
+          {
+            "id": "3d7aefda-4ed6-4c99-b61c-b1530146dd03-11",
+            "text": "k",
+            "kind": "glyph",
+            "seed": 1366606567,
+            "density": 0.9733333333333333,
+            "mode": "ink"
+          },
+          {
+            "id": "3d7aefda-4ed6-4c99-b61c-b1530146dd03-12",
+            "text": ".",
+            "kind": "glyph",
+            "seed": 1366614486,
+            "density": 0.9733333333333333,
+            "mode": "ink"
+          },
+          {
+            "id": "bd02ae1b-285d-482e-8960-5163eeddab51",
+            "text": "A clipping\nTwo lines",
+            "kind": "clipping",
+            "seed": 3373643129,
+            "density": 1,
+            "mode": "draft"
+          }
+        ],
+        "cursor": 14
+      }
+    },
+    {
+      "version": 1,
+      "id": "waste-fixture",
+      "created": 1791465636899,
+      "torn": 1791370800000,
+      "discardedAt": 1791370800000,
+      "continuedFrom": [],
+      "events": [],
+      "document": {
+        "marks": [],
+        "cursor": 0
+      }
+    }
+  ],
+  "settings": {
+    "volume": 0.22,
+    "bell": true,
+    "room": "study",
+    "light": "auto",
+    "face": "book",
+    "reduceMotion": false,
+    "largeType": false
+  },
+  "uncovered": true,
+  "day": "2026-10-7",
+  "linesToday": 5
+}

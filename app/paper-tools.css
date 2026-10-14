@@ -1,0 +1,618 @@
+/* Tools that work on the paper itself: the inked title, scissors and tape,
+   the paste tag, and the copy holder beside the machine. Loaded after
+   globals.css and motion.css. */
+
+/* ---- Title ---------------------------------------------------------------
+   The input keeps native editing with transparent text; the inked copy of its
+   glyphs sits exactly underneath (components/paper-title.tsx). */
+.paper-title-field {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+.desk-refined .paper-title-field > input.paper-title {
+  position: relative;
+  z-index: 1;
+  color: transparent;
+  caret-color: var(--ribbon, #22201b);
+}
+.desk-refined .paper-title-field > input.paper-title::selection {
+  color: transparent;
+  background: #bd995b55;
+}
+.desk-refined .paper-title.paper-title-ink {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  overflow: hidden;
+  white-space: pre;
+  pointer-events: none;
+  border-bottom-color: transparent;
+  color: var(--ribbon, #22201b);
+}
+.paper-title-ink-run {
+  display: inline-block;
+  will-change: transform;
+}
+.paper-title-ink .ink-glyph {
+  -webkit-text-stroke: 0.35px currentColor;
+}
+.paper-title-ink .ink-fresh {
+  animation: ink-wet 900ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .paper-title-ink .ink-fresh {
+    animation: none;
+  }
+}
+
+/* ---- Scissors and tape -----------------------------------------------------
+   components/scissors.ts draws the cut strip above the desk; the words have
+   already left the line. */
+.cut-strip {
+  position: fixed;
+  z-index: 120;
+  box-sizing: border-box;
+  padding: 3px 6px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  background: #efe7d2 url("/textures/paper-cotton.png") 0 0 / 420px;
+  background-blend-mode: multiply;
+  outline: 1.5px dashed #6d5f4699;
+  outline-offset: -1px;
+  transform-origin: 30% 60%;
+  animation: cut-trace 260ms linear both;
+}
+@keyframes cut-trace {
+  from {
+    outline-color: #6d5f4600;
+  }
+}
+.cut-strip.is-held,
+.cut-strip.is-landing {
+  outline-color: transparent;
+  transition: outline-color 200ms ease;
+  box-shadow: 4px 10px 18px #1b130c40;
+}
+.cut-strip.is-held {
+  /* Its torn-free scissor edges: a hair of fibre on the long sides. */
+  clip-path: polygon(0 1px, 100% 0, 100% calc(100% - 1px), 0 100%);
+}
+.cut-strip-text {
+  position: relative;
+}
+/* A copy has no cut to trace: a duplicate peels straight off the words. */
+.cut-strip.is-copy {
+  outline-color: transparent;
+  animation: none;
+}
+.cut-scissors {
+  position: absolute;
+  left: 0;
+  bottom: -12px;
+  color: #2f2a22;
+  filter: drop-shadow(0 1px 1px #0006);
+}
+.cut-strip[dir="rtl"] .cut-scissors svg {
+  transform: scaleX(-1);
+}
+.cut-strip.is-landing::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 30%;
+  width: 40%;
+  height: 14px;
+  background: #e8dcae99;
+  box-shadow: 0 1px 2px #7a6c4222;
+  animation: tape-press 300ms 300ms var(--motion-out, ease-out) both;
+}
+@keyframes tape-press {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) rotate(-6deg) scaleX(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-0.8deg);
+  }
+}
+
+/* A clipping just pasted from outside: its tape is pressed down. */
+.paper-editor .clipping-landed::before {
+  animation: tape-press 320ms var(--motion-out, ease-out) both;
+}
+.paper-editor .clipping-landed {
+  animation: clipping-set 360ms var(--motion-out, ease-out) both;
+}
+@keyframes clipping-set {
+  from {
+    transform: translateY(-6px) rotate(-0.4deg);
+    box-shadow: 5px 9px 14px #71623e33;
+  }
+}
+
+/* ---- Keys over the paper -----------------------------------------------------
+   The selection bar and the paste tag share one look with the control strip:
+   dark bakelite, ivory marks, a soft drop to the desk. */
+.selection-bar,
+.paste-tag {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  border: 1px solid #ffffff1c;
+  border-radius: 9px;
+  background: linear-gradient(#2c2721f2, #1d1914f2);
+  color: #efe5cf;
+  box-shadow:
+    inset 0 1px #ffffff14,
+    0 1px 2px #0006,
+    0 8px 20px #0b06034d;
+  font: 500 12px/1 var(--sans);
+  white-space: nowrap;
+}
+.selection-bar {
+  gap: 2px;
+  padding: 3px;
+  animation: keys-in 160ms var(--motion-out, ease-out) both;
+}
+.selection-bar.is-below {
+  animation-name: keys-in-below;
+}
+/* A small nub pointing back at the words. */
+.selection-bar::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--nub, 50%) - 5px);
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  rotate: 45deg;
+  background: #1d1914;
+  border-right: 1px solid #ffffff1c;
+  border-bottom: 1px solid #ffffff1c;
+}
+.selection-bar.is-below::after {
+  top: -5px;
+  bottom: auto;
+  background: #2c2721;
+  border: 0;
+  border-left: 1px solid #ffffff1c;
+  border-top: 1px solid #ffffff1c;
+}
+.selection-bar-group {
+  display: flex;
+  gap: 2px;
+}
+.selection-bar-group + .selection-bar-group {
+  margin-left: 3px;
+  padding-left: 5px;
+  border-left: 1px solid #ffffff1f;
+}
+.selection-bar-key {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #e9dfc7;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+.selection-bar-key.has-label {
+  display: flex;
+  gap: 7px;
+  width: auto;
+  padding: 0 11px 0 9px;
+  font: 500 12px/1 var(--sans);
+  letter-spacing: 0.02em;
+}
+.selection-bar-key.has-label::after {
+  display: none;
+}
+.selection-bar-key:hover {
+  background: #ffffff17;
+  color: #fff8e8;
+}
+.selection-bar-key:active {
+  background: #ffffff0d;
+  transform: translateY(1px);
+}
+.selection-bar-key[aria-pressed="true"] {
+  background: #e9dfc7;
+  color: #2a241c;
+}
+.selection-bar-key:focus-visible {
+  outline: 2px solid #e7cca0;
+  outline-offset: 1px;
+}
+/* Hints: the key's name and shortcut, after the pointer rests on it. */
+.selection-bar-key::after {
+  content: attr(data-hint);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 9px);
+  translate: -50% 4px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: #11100d;
+  color: #efe5cf;
+  font: 500 11px/1 var(--sans);
+  white-space: pre;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 120ms ease,
+    translate 160ms var(--motion-out, ease-out);
+}
+.selection-bar.is-below .selection-bar-key::after {
+  top: calc(100% + 9px);
+  bottom: auto;
+  translate: -50% -4px;
+}
+.selection-bar-key:hover::after {
+  opacity: 1;
+  translate: -50% 0;
+  transition-delay: 380ms;
+}
+@keyframes keys-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+@keyframes keys-in-below {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+/* The paste tag: what happened, and one key for the other form. */
+.paste-tag {
+  gap: 8px;
+  padding: 3px 3px 3px 10px;
+  animation: keys-in 180ms var(--motion-out, ease-out) both;
+}
+.paste-tag-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #cdbf9f;
+}
+.paste-tag button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: #ffffff14;
+  color: #fff8e8;
+  font: 500 12px var(--sans);
+  cursor: pointer;
+}
+.paste-tag button:hover {
+  background: #ffffff24;
+}
+
+/* Code: a slate ribbon over a faint grey ground. */
+.paper-editor .code-mark,
+.readable-paper .code-mark {
+  color: #33495a;
+  background: #5f707d1f;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cut-strip,
+  .cut-strip.is-landing::before,
+  .paper-editor .clipping-landed,
+  .paper-editor .clipping-landed::before,
+  .paste-tag,
+  .selection-bar {
+    animation: none;
+  }
+}
+.reduce-motion .paper-editor .clipping-landed,
+.reduce-motion .paper-editor .clipping-landed::before {
+  animation: none;
+}
+
+/* ---- Copy holder -------------------------------------------------------------
+   One sheet of notes in a clip, kept in a drawer at the desk's left edge. Only
+   its leather pull tab shows until it is pulled out; it slides out on a
+   runner and latches (components/copy-holder.tsx). --pull follows the hand
+   while dragging; otherwise the open state sets it. */
+.copy-holder {
+  --pull: 0;
+  position: fixed;
+  z-index: 30;
+  left: 18px;
+  top: 92px;
+  bottom: 96px;
+  width: min(330px, calc(100vw - 80px));
+  pointer-events: none;
+  transform: translateX(calc((var(--pull) - 1) * (100% + 18px)))
+    rotate(calc(var(--pull) * -0.6deg));
+  transform-origin: 0 50%;
+  /* On the runner, on the same drawer curve and time as the desk making
+     room ([data-camera-moving] below), both ways. */
+  transition:
+    transform 440ms var(--ease-drawer),
+    opacity 200ms ease;
+}
+.copy-holder.is-open {
+  --pull: 1;
+}
+.copy-holder.is-dragging {
+  transition: none;
+}
+.copy-holder.is-hidden {
+  opacity: 0;
+}
+.copy-holder-sheet {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  pointer-events: auto;
+  padding: 40px 0 0;
+  background: var(--holder-paper, #efe7d2) var(--holder-texture) 0 0 / 420px;
+  background-blend-mode: multiply;
+  box-shadow:
+    inset 0 1px #fff8,
+    1px 2px 3px #0b06033d,
+    6px 14px 24px #0b060340;
+}
+.copy-holder-clip {
+  position: absolute;
+  z-index: 2;
+  top: -12px;
+  left: 50%;
+  width: 112px;
+  height: 30px;
+  translate: -50% 0;
+  border-radius: 4px 4px 7px 7px;
+  background: linear-gradient(#ece9e2, #aaa59b 45%, #d9d5cd 52%, #8f8a80);
+  box-shadow:
+    inset 0 1px #fff,
+    inset 0 -2px 2px #0003,
+    0 3px 5px #0008;
+}
+.copy-holder-clip::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: -9px;
+  height: 12px;
+  border: 2px solid #bcb8b0;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+}
+.copy-holder-text {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 24px 24px;
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+  color: #2f281e;
+  font:
+    14px/24px "Libre Baskerville",
+    Georgia,
+    serif;
+  caret-color: #8f3b22;
+  scrollbar-width: thin;
+  scrollbar-color: #9d8a6570 transparent;
+}
+.copy-holder-text::placeholder {
+  color: #8a7a5d;
+  font-style: italic;
+}
+.copy-holder-text::selection {
+  background: #bd995b55;
+}
+/* The pull tab: a strip of leather stitched to the sheet's edge. It stays at
+   the desk's edge when the drawer is in. */
+.copy-holder-handle {
+  position: absolute;
+  top: 50%;
+  right: -34px;
+  width: 34px;
+  height: 120px;
+  translate: 0 -50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 0 9px 9px 0;
+  pointer-events: auto;
+  background:
+    repeating-linear-gradient(0deg, #ffffff08 0 1px, transparent 1px 3px),
+    linear-gradient(90deg, #5b3a22, #74492a 60%, #5f3d24);
+  box-shadow:
+    inset -1px 0 #ffffff1f,
+    inset 0 0 0 3px #00000014,
+    3px 4px 8px #0b06035c;
+  color: #ecd9b7;
+  cursor: grab;
+  touch-action: none;
+}
+.copy-holder-handle::before {
+  content: "";
+  position: absolute;
+  inset: 5px 5px 5px 3px;
+  border: 1px dashed #e9d3a855;
+  border-left: 0;
+  border-radius: 0 6px 6px 0;
+  pointer-events: none;
+}
+.copy-holder.is-dragging .copy-holder-handle {
+  cursor: grabbing;
+}
+.copy-holder-handle:hover {
+  filter: brightness(1.08);
+}
+.copy-holder-handle:focus-visible {
+  outline: 2px solid #e7cca0;
+  outline-offset: 2px;
+}
+.copy-holder-grip {
+  width: 10px;
+  height: 22px;
+  border-radius: 5px;
+  background: radial-gradient(circle at 40% 35%, #f3dfaa, #a97f3c 60%, #6d4f22);
+  box-shadow:
+    inset 0 0 0 2px #00000033,
+    0 1px 1px #0008;
+}
+.copy-holder-label {
+  writing-mode: vertical-rl;
+  rotate: 180deg;
+  font: 600 9px var(--sans);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  text-shadow: 0 1px #0009;
+}
+/* The camera's move for Settings and the copy holder: the whole desk
+   slides and shrinks aside on a drawer curve, in step with the panel or the
+   drawer coming in (aimCamera in components/deckle.tsx; CAMERA_MS there).
+   It stays on its own layer while moving, so the paper isn't repainted at
+   every step of the scale. While the holder's tab is dragged, the desk
+   follows the hand directly (--holder-pull). */
+:root {
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+.desk-refined[data-camera-moving]
+  :is(.desk-objects, .pendant-lamp, .desk-light-map) {
+  transition: transform 440ms var(--ease-drawer);
+  will-change: transform;
+}
+.desk-refined[data-camera-moving] .pull-cord {
+  transition:
+    translate 440ms var(--ease-drawer),
+    opacity 240ms ease,
+    visibility 0s;
+}
+.desk-refined.holder-dragging
+  :is(.desk-objects, .pendant-lamp, .desk-light-map, .pull-cord) {
+  transition: none;
+}
+/* What the drawer covers on the left leaves quietly. */
+.desk-refined.holder-open
+  :is(.wall-toggle-switch, .activity-meter, .desk-clock) {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 260ms ease,
+    visibility 0s 260ms;
+}
+/* Pushed back in, the furniture returns once the drawer has cleared it. */
+.desk-refined[data-camera-moving]:not(.holder-open, .settings-open)
+  :is(.wall-toggle-switch, .activity-meter, .desk-clock) {
+  transition:
+    opacity 320ms ease 160ms,
+    visibility 0s;
+}
+/* Mid-pull, the furniture fades with the hand instead. */
+.desk-refined.holder-dragging
+  :is(.wall-toggle-switch, .activity-meter, .desk-clock) {
+  opacity: max(0, 1 - var(--holder-pull, 0) * 2.5);
+  visibility: visible;
+  pointer-events: none;
+  transition: none;
+}
+/* Reduced motion: the desk changes framing without travelling. */
+.desk-refined.reduce-motion[data-camera-moving]
+  :is(.desk-objects, .pendant-lamp, .desk-light-map, .pull-cord) {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .desk-refined[data-camera-moving]
+    :is(.desk-objects, .pendant-lamp, .desk-light-map, .pull-cord) {
+    transition: none;
+  }
+}
+@media (max-width: 800px) {
+  .copy-holder {
+    top: auto;
+    bottom: 12px;
+    height: 40svh;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .copy-holder,
+  .copy-holder:not(.is-open) {
+    transition: opacity 120ms ease;
+  }
+}
+.reduce-motion .copy-holder,
+.reduce-motion .copy-holder:not(.is-open) {
+  transition: opacity 120ms ease;
+}
+
+/* ---- Rolling the platen ------------------------------------------------------
+   Every way of turning the platen has its own pace (data-roll, set in
+   components/deckle.tsx):
+   - none: a line space, quick and firm with one small settle;
+   - scroll: the wheel or trackpad, gathered into one move per frame and
+     chased with a short ease-out; a slow start or a settle here reads as
+     lag and judder;
+   - drag: a hand on the feed knob, followed almost directly;
+   - step: one ratchet click of the knob;
+   - return: a long roll back to the print line, paced by its length and
+     easing in and out like a knob turned by hand. */
+.desk-refined .paper-strip {
+  --roll-duration: 150ms;
+  --roll-ease: var(--settle);
+  transition: transform var(--roll-duration) var(--roll-ease);
+}
+.desk-refined .paper-strip[data-roll="scroll"] {
+  --roll-duration: 140ms;
+  --roll-ease: cubic-bezier(0.2, 0.6, 0.3, 1);
+}
+.desk-refined .paper-strip[data-roll="drag"] {
+  --roll-duration: 50ms;
+  --roll-ease: linear;
+}
+.desk-refined .paper-strip[data-roll="step"] {
+  --roll-duration: 200ms;
+}
+.desk-refined .paper-strip[data-roll="return"] {
+  --roll-duration: calc(170ms + min(var(--roll-lines, 3), 14) * 26ms);
+  --roll-ease: cubic-bezier(0.45, 0.05, 0.25, 1);
+}
+/* The light on the sheet stays put while the sheet moves through it: these
+   layers counter-move by the same feed offset, so they must share the
+   sheet's exact duration and curve, or the lit band drifts across the paper
+   for the length of the roll. Background textures that travel with the
+   paper follow the same timing. */
+.desk-refined .paper-strip :is(.paper-light, .paper-raking) {
+  transition-property: transform, background-position;
+  transition-duration: var(--roll-duration);
+  transition-timing-function: var(--roll-ease);
+}
+.desk-refined .paper-strip .paper-light::before,
+.desk-refined .paper-strip .paper-light::after {
+  transition:
+    opacity 240ms ease,
+    top var(--roll-duration) var(--roll-ease),
+    background-position var(--roll-duration) var(--roll-ease);
+}
+.copy-holder-text:focus-visible {
+  outline: none;
+}

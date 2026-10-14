@@ -1,0 +1,660 @@
+/* Motion and sound pass. Entrances, exits and states for the battery, the
+   settings inspector, the archive and the lamp cue. Loaded after globals.css,
+   so these rules replace the older, flatter versions of the same objects.
+
+   Mechanisms move fast and stop firmly: ease-out on the way in, ease-in on the
+   way out, at most a hair of settle (DESIGN.md "Motion rules"). Every moving
+   part has a reduced-motion branch that fades instead. */
+
+:root {
+  --motion-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --motion-in: cubic-bezier(0.55, 0, 0.9, 0.4);
+  --motion-settle: cubic-bezier(0.22, 1.16, 0.4, 1);
+}
+
+/* ---- Battery ------------------------------------------------------------
+   Closed it is a lamp panel; the tooltip explains it after a hover rests.
+   Opened, a brass plate is drawn out of the housing, the cells run a lamp
+   test up to today's charge and the counter drums tumble to their figures. */
+.desk-refined .activity-drawer {
+  top: 4px;
+  left: 20px;
+  width: min(244px, calc(100vw - 58px));
+  height: 100px;
+  transition: visibility 0s 240ms;
+}
+.desk-refined .activity-meter.is-open .activity-drawer {
+  transition-delay: 0s;
+}
+.desk-refined .activity-face {
+  height: 96px;
+  margin: 2px 18px 2px 0;
+  padding: 11px 16px 9px 28px;
+  transform: translateX(calc(-100% - 8px));
+  box-shadow:
+    inset 0 1px #dfc68c55,
+    inset 0 -1px #0009,
+    0 0 0 #0000;
+  transition:
+    transform 240ms var(--motion-in),
+    box-shadow 240ms ease;
+}
+.desk-refined .activity-meter.is-open .activity-face {
+  transform: none;
+  box-shadow:
+    inset 0 1px #dfc68c55,
+    inset 0 -1px #0009,
+    3px 4px 9px #0009;
+  transition:
+    transform 400ms var(--motion-settle),
+    box-shadow 400ms ease;
+}
+.activity-legend {
+  margin: 8px 0 0;
+  font: 8px/1 var(--sans);
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  color: #b9aa83;
+  text-shadow: 0 1px #0007;
+}
+/* Each cell is a lamp of its own colour, warm at the bottom and green at
+   the top, so the level reads at a glance: a low battery glows red. */
+.desk-refined .energy-cells i {
+  background: radial-gradient(
+    ellipse,
+    var(--cell-core),
+    var(--cell-mid) 70%,
+    var(--cell-edge)
+  );
+  box-shadow: inset 0 0 3px var(--cell-core);
+}
+.desk-refined .energy-cells > span:nth-child(1) {
+  --cell-core: #ffc0a4;
+  --cell-mid: #e0633f;
+  --cell-edge: #98301f;
+}
+.desk-refined .energy-cells > span:nth-child(2) {
+  --cell-core: #ffd6a4;
+  --cell-mid: #e48f43;
+  --cell-edge: #9c5a22;
+}
+.desk-refined .energy-cells > span:nth-child(3) {
+  --cell-core: #f9e6a6;
+  --cell-mid: #d9b54f;
+  --cell-edge: #977728;
+}
+.desk-refined .energy-cells > span:nth-child(4) {
+  --cell-core: #ebefaa;
+  --cell-mid: #c2cc6c;
+  --cell-edge: #7d8f3e;
+}
+.desk-refined .energy-cells > span:nth-child(5) {
+  --cell-core: #e0ebaf;
+  --cell-mid: #afc880;
+  --cell-edge: #749254;
+}
+@keyframes cell-test {
+  0% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+}
+.desk-refined .activity-meter.is-open .energy-cells i {
+  animation: cell-test 560ms ease-out backwards;
+  animation-delay: calc(120ms + var(--cell, 0) * 65ms);
+}
+.desk-refined .activity-meter.is-open .activity-face .counter-drum b {
+  animation: digit-roll 360ms var(--motion-out) backwards;
+}
+.desk-refined .activity-face .counter-drum:nth-child(1) b {
+  animation-delay: 260ms;
+}
+.desk-refined .activity-face .counter-drum:nth-child(2) b {
+  animation-delay: 305ms;
+}
+.desk-refined .activity-face .counter-drum:nth-child(3) b {
+  animation-delay: 350ms;
+}
+.desk-refined .activity-face .counter-drum:nth-child(4) b {
+  animation-delay: 395ms;
+}
+.desk-refined .activity-face .counter-drum:nth-child(5) b {
+  animation-delay: 440ms;
+}
+.desk-refined .activity-face .counter-drum:nth-child(6) b {
+  animation-delay: 485ms;
+}
+/* The explanation arrives only once a hover has rested, and never on top of
+   the plate that already says the same thing. */
+.desk-refined .battery-help {
+  left: 54px;
+  top: 26px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-6px);
+  transition:
+    opacity 140ms ease,
+    transform 160ms var(--motion-in),
+    visibility 0s 140ms;
+}
+@media (hover: hover) and (pointer: fine) {
+  .desk-refined
+    .activity-meter:not(.is-open)
+    .energy-toggle:hover
+    + .battery-help {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition:
+      opacity 180ms ease 520ms,
+      transform 240ms var(--motion-out) 520ms,
+      visibility 0s 520ms;
+  }
+}
+.desk-refined
+  .activity-meter:not(.is-open)
+  .energy-toggle:focus-visible
+  + .battery-help {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition:
+    opacity 140ms ease,
+    transform 200ms var(--motion-out),
+    visibility 0s;
+}
+.desk-refined .activity-meter.is-open .battery-help {
+  opacity: 0;
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desk-refined .activity-face,
+  .desk-refined .activity-meter.is-open .activity-face {
+    transform: none;
+    transition: opacity 150ms ease;
+  }
+  .desk-refined .activity-face {
+    opacity: 0;
+  }
+  .desk-refined .activity-meter.is-open .activity-face {
+    opacity: 1;
+  }
+  .desk-refined .activity-meter.is-open .energy-cells i,
+  .desk-refined .activity-meter.is-open .activity-face .counter-drum b {
+    animation: none;
+  }
+  .desk-refined .battery-help {
+    transform: none;
+  }
+}
+.desk-refined.reduce-motion .activity-face,
+.desk-refined.reduce-motion .activity-meter.is-open .activity-face {
+  transform: none;
+  transition: opacity 150ms ease;
+}
+.desk-refined.reduce-motion .activity-face {
+  opacity: 0;
+}
+.desk-refined.reduce-motion .activity-meter.is-open .activity-face {
+  opacity: 1;
+}
+.desk-refined.reduce-motion .activity-meter.is-open .energy-cells i,
+.desk-refined.reduce-motion
+  .activity-meter.is-open
+  .activity-face
+  .counter-drum
+  b {
+  animation: none;
+}
+.desk-refined.reduce-motion .battery-help {
+  transform: none;
+}
+
+/* ---- Settings inspector -------------------------------------------------
+   The sheet itself is moved by the Web Animations call in reference-card.tsx
+   (it has to be reversible mid-flight). Here: what happens around and inside
+   it. Things the inspector covers stop being desk furniture by fading away,
+   not by vanishing, and the sheet's contents are set down after the sheet. */
+@keyframes inspector-item {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes inspector-page {
+  from {
+    opacity: 0;
+    transform: translateX(22px);
+  }
+}
+@keyframes inspector-page-back {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+}
+/* Focus lands on the sheet and its page as containers; they are not controls. */
+.desk-refined .settings-inspector:focus-visible,
+.desk-refined .settings-inspector .reference-panel:focus-visible {
+  outline: none;
+}
+.desk-refined .settings-inspector .reference-running {
+  animation: inspector-item 320ms var(--motion-out) 140ms backwards;
+}
+.desk-refined .settings-inspector .reference-panel {
+  animation: inspector-page 260ms var(--motion-out) both;
+}
+.desk-refined .settings-inspector .reference-panel:has(> .settings-menu) {
+  animation: inspector-page-back 240ms var(--motion-out) both;
+}
+.desk-refined .settings-inspector .settings-menu > * {
+  animation: inspector-item 340ms var(--motion-out) backwards;
+}
+.desk-refined .settings-inspector .settings-menu > :nth-child(1) {
+  animation-delay: 190ms;
+}
+.desk-refined .settings-inspector .settings-menu > :nth-child(2) {
+  animation-delay: 235ms;
+}
+.desk-refined .settings-inspector .settings-menu > :nth-child(3) {
+  animation-delay: 280ms;
+}
+.desk-refined .settings-inspector .settings-menu > :nth-child(4) {
+  animation-delay: 325ms;
+}
+.desk-refined .settings-inspector .settings-menu > :nth-child(5) {
+  animation-delay: 370ms;
+}
+/* Furniture the inspector covers fades and drifts instead of popping. */
+.desk-refined.settings-open :is(.wall-toggle-switch, .desk-clock, .local-note) {
+  opacity: 0;
+  translate: -18px 0;
+  transition:
+    opacity 180ms ease,
+    translate 220ms var(--motion-in),
+    visibility 0s 220ms;
+}
+.desk-refined.settings-open .pull-cord {
+  opacity: 0;
+  transition:
+    opacity 180ms ease,
+    translate 260ms var(--mechanical-ease),
+    visibility 0s 220ms;
+}
+.desk-refined.settings-open:is(
+    [data-desk-focus="lamp"],
+    [data-desk-focus="rail"]
+  )
+  :is(.pull-cord, .wall-toggle-switch),
+.desk-refined.settings-open[data-desk-focus="desk"] .desk-clock {
+  opacity: 1;
+  translate: none;
+  transition-delay: 0s;
+}
+/* The battery is hidden by attribute while a sheet is open; let it leave
+   quietly rather than disappear in a frame. */
+.desk-refined .activity-meter[hidden] {
+  display: block;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  translate: -24px 0;
+  transition:
+    opacity 180ms ease,
+    translate 220ms var(--motion-in),
+    visibility 0s 220ms;
+}
+.desk-refined .activity-meter:not([hidden], .is-retired) {
+  transition:
+    opacity 240ms ease 120ms,
+    translate 300ms var(--motion-out) 120ms,
+    visibility 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desk-refined
+    .settings-inspector
+    :is(.reference-running, .reference-panel, .settings-menu > *) {
+    animation: none;
+  }
+  .desk-refined.settings-open
+    :is(.wall-toggle-switch, .desk-clock, .local-note, .pull-cord),
+  .desk-refined .activity-meter[hidden] {
+    translate: none;
+    transition: none;
+  }
+}
+.desk-refined.reduce-motion
+  .settings-inspector
+  :is(.reference-running, .reference-panel, .settings-menu > *) {
+  animation: none;
+}
+.desk-refined.reduce-motion.settings-open
+  :is(.wall-toggle-switch, .desk-clock, .local-note, .pull-cord),
+.desk-refined.reduce-motion .activity-meter[hidden] {
+  translate: none;
+  transition: none;
+}
+
+/* ---- Archive -------------------------------------------------------------
+   Opening: the tray is drawn toward you and the labels arrive after it.
+   Reading: the sheet is drawn up out of its folder from behind the folder's
+   front; the drawer behind it steps away completely (a translucent ghost of
+   it looked like a rendering fault). Putting back reverses the same path.
+   Empty: the drawer is still there, with a note lying in it. */
+:root {
+  --folder-teal: #2f5249;
+  --folder-teal-shadow: #223d36;
+}
+@media (min-width: 681px) {
+  .archive-folder-view .archive-deck {
+    height: min(620px, calc(100dvh - 170px));
+  }
+}
+.archive-deck-view .archive-veil {
+  transition:
+    opacity 260ms ease,
+    background-color 320ms ease;
+}
+.archive-deck-view.is-reading .archive-veil {
+  background-color: #140f0a8c;
+}
+.archive-drawer-canvas.is-ready,
+.archive-drawer-canvas.has-fallback {
+  animation:
+    drawer-arrive 520ms cubic-bezier(0.2, 0.9, 0.25, 1.03) both,
+    veil-in 200ms linear both;
+  transform-origin: 50% 90%;
+}
+@keyframes drawer-arrive {
+  from {
+    transform: translateY(44px) rotateX(9deg) scale(0.93);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.archive-folder-view .archive-deck-bar {
+  animation: veil-in 260ms ease 220ms backwards;
+}
+.archive-folder-view.is-closing .archive-shell {
+  animation: drawer-depart 300ms var(--motion-in) both;
+}
+@keyframes drawer-depart {
+  to {
+    opacity: 0;
+    transform: translateY(40px) scale(0.965);
+  }
+}
+
+/* The drawer steps away rather than ghosting behind the sheet. */
+.archive-drawer-stage {
+  transition:
+    transform 260ms var(--motion-out),
+    opacity 200ms ease;
+}
+.archive-drawer-stage.is-behind-preview {
+  transform: scale(0.97);
+  opacity: 0;
+}
+
+/* Folder: back panel, the sheet, then the folder's front over its lower part. */
+.archive-folder-stage {
+  clip-path: inset(-120px -60px 0 -60px);
+  animation: folder-stage-in 200ms ease both;
+}
+.archive-folder-stage.is-returning {
+  animation: folder-stage-out 260ms ease both;
+}
+@keyframes folder-stage-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes folder-stage-out {
+  to {
+    opacity: 0;
+  }
+}
+.archive-folder-view .archive-folder-backing {
+  inset: auto -12px 0 -12px;
+  height: 250px;
+  border-radius: 7px 7px 3px 3px;
+  background: var(--folder-teal) url("/textures/paper-white.png") center / 360px;
+  background-blend-mode: multiply;
+  box-shadow:
+    inset 0 1px #ffffff1c,
+    0 14px 30px #0a060666;
+  transform: none;
+}
+.archive-folder-view .archive-active {
+  animation: none;
+}
+.archive-folder-view .archive-paper {
+  animation: paper-draw-up 480ms var(--motion-out) 40ms backwards;
+}
+.archive-folder-stage.is-returning .archive-paper {
+  animation: paper-slide-back 240ms var(--motion-in) both;
+}
+@keyframes paper-draw-up {
+  from {
+    transform: translateY(150px);
+  }
+}
+@keyframes paper-slide-back {
+  to {
+    transform: translateY(150px);
+  }
+}
+.archive-folder-view .archive-paper-scroll {
+  padding-bottom: 112px;
+}
+.archive-folder-front {
+  position: absolute;
+  z-index: 3;
+  left: -12px;
+  right: -12px;
+  bottom: 0;
+  height: 156px;
+  border-radius: 5px 5px 3px 3px;
+  background:
+    linear-gradient(#ffffff14, #00000000 18%),
+    var(--folder-teal) url("/textures/paper-white.png") center / 360px;
+  background-blend-mode: normal, multiply;
+  box-shadow:
+    inset 0 1px #ffffff2e,
+    0 -8px 16px #0a060655;
+  pointer-events: none;
+  animation: folder-front-in 260ms var(--motion-out) both;
+}
+.archive-folder-stage.is-returning .archive-folder-front {
+  animation: none;
+}
+@keyframes folder-front-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+.archive-folder-view .archive-paper-actions {
+  position: relative;
+  z-index: 4;
+  height: 48px;
+  margin-top: 16px;
+  gap: 10px;
+  animation: veil-in 260ms ease 220ms backwards;
+}
+.archive-put-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #e6dcc3;
+  font: 500 14px var(--sans);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.archive-put-back:hover {
+  background: #ffffff14;
+  color: #fff7e6;
+}
+.archive-put-back:disabled {
+  opacity: 0.5;
+}
+
+/* Empty: a note lying in the drawer (or on the desk, for the wastebasket). */
+.archive-folder-view .archive-empty-note {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  top: 47%;
+  width: min(320px, calc(100% - 48px));
+  padding: 20px 26px 22px;
+  /* One transform: the build drops translate/rotate beside a transform. */
+  transform: translate(-50%, -50%) rotate(-1.4deg) perspective(800px)
+    rotateX(14deg);
+  text-align: center;
+  color: #322a1e;
+  background: var(--paper, #f0e9d6) url("/textures/paper-cotton.png") 0 0 /
+    420px;
+  background-blend-mode: multiply;
+  box-shadow:
+    4px 10px 18px #0a060466,
+    1px 2px 3px #0a06042b;
+  animation: empty-note-in 520ms var(--motion-out) 260ms backwards;
+}
+.archive-empty-note p {
+  margin: 0;
+  font: 17px/1.4 var(--mono);
+}
+.archive-empty-note span {
+  display: block;
+  margin-top: 8px;
+  font: 13px/1.5 var(--sans);
+  color: #71634b;
+}
+@keyframes empty-note-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% - 26px)) rotate(2.6deg)
+      perspective(800px) rotateX(14deg);
+  }
+}
+.archive-drawer-stage.is-empty {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .archive-folder-stage,
+  .archive-folder-view .archive-paper,
+  .archive-folder-front,
+  .archive-folder-view .archive-paper-actions,
+  .archive-folder-view .archive-deck-bar,
+  .archive-folder-view .archive-empty-note {
+    animation: none;
+  }
+  .archive-drawer-stage,
+  .archive-drawer-stage.is-behind-preview {
+    transform: none;
+    transition: none;
+  }
+}
+.reduce-motion .archive-folder-stage,
+.reduce-motion .archive-folder-view .archive-paper,
+.reduce-motion .archive-folder-front,
+.reduce-motion .archive-folder-view .archive-paper-actions,
+.reduce-motion .archive-folder-view .archive-deck-bar,
+.reduce-motion .archive-folder-view .archive-empty-note {
+  animation: none;
+}
+.reduce-motion .archive-drawer-stage,
+.reduce-motion .archive-drawer-stage.is-behind-preview {
+  transform: none;
+  transition: none;
+}
+
+/* ---- Guide cue -----------------------------------------------------------
+   When the setup guide or the Light page points at the lamp or the rail
+   fader, the object itself breathes twice (a glow, not an outline: an
+   outline traced the lamp button's 330px box and read as a stray ellipse). */
+.desk-refined[data-desk-focus="lamp"] .pendant-lamp {
+  outline: none;
+  border-radius: 0;
+}
+.desk-refined[data-desk-focus="lamp"] .pendant-lamp img {
+  animation: lamp-call 1600ms ease-in-out 2;
+}
+@keyframes lamp-call {
+  50% {
+    filter: brightness(
+        calc(
+          0.46 + var(--room-light-opacity, 1) * 0.4 +
+            var(--desk-light-intensity, 0) * 0.18
+        )
+      )
+      drop-shadow(0 10px 24px #ffd9a0aa);
+  }
+}
+.desk-refined[data-desk-focus="rail"] .fader-bed {
+  outline: none;
+  animation: fader-call 1600ms ease-in-out 2;
+}
+@keyframes fader-call {
+  50% {
+    box-shadow:
+      0 0 0 3px #e4cba655,
+      0 0 18px #ffd9a099;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .desk-refined[data-desk-focus="lamp"] .pendant-lamp img,
+  .desk-refined[data-desk-focus="rail"] .fader-bed {
+    animation: none;
+  }
+}
+.desk-refined.reduce-motion[data-desk-focus="lamp"] .pendant-lamp img,
+.desk-refined.reduce-motion[data-desk-focus="rail"] .fader-bed {
+  animation: none;
+}
+
+/* ---- Share sheet ----------------------------------------------------------
+   A native dialog: it only needed an entrance. */
+.share-dialog[open] {
+  animation: share-in 300ms var(--motion-out) both;
+}
+.share-dialog[open]::backdrop {
+  animation: veil-in 240ms ease both;
+}
+@keyframes share-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .share-dialog[open],
+  .share-dialog[open]::backdrop {
+    animation: none;
+  }
+}
+
+/* Returning a sheet: the folder stays solid while the sheet slides back behind
+   its front; the stage as a whole fades (see folder-stage-out). */
+.archive-folder-stage.is-returning .archive-active {
+  animation: none;
+}
+.archive-folder-view
+  .archive-folder-stage.is-returning
+  .archive-folder-backing {
+  opacity: 1;
+  transition: none;
+}
