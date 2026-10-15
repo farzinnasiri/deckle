@@ -3,8 +3,8 @@ import { paperCurlProfile } from "@/lib/paper-curl";
 import { paperVariables } from "@/lib/materials";
 import type { PaperOptions } from "@/lib/writing";
 
-/** The crest where the sheet rolls back over itself. Its torn edge is behind
- * the bend; fibres foreshorten and the writing turns away from the reader.
+/** The exposed sheet becomes top heavy and bends towards the reader. Its
+ * shoulders taper into the crest; fibres foreshorten over the bend.
  * The live editor stays on the flat sheet, so feeding back reveals the ink. */
 export function PaperCurl({
   feedOffset,

@@ -1,5 +1,5 @@
-/** Paper leaves the platen with a backward set, so excess sheet rolls away
- * over a rounded crest instead of growing off the desk. `crest` is the
+/** Excess sheet becomes top heavy and bows towards the reader instead of
+ * growing off the desk. `crest` is the
  * projected height of that bend; it approaches a fixed radius, including for
  * very long documents. */
 export const CREST_RADIUS = 34;

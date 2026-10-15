@@ -54,6 +54,7 @@ import { DeskFocusGuide, type DeskFocus } from "./desk-focus-guide";
 import { visibleControls } from "@/lib/desk-layout";
 import { ActivityMeter } from "./activity-meter";
 import { PaperCurl } from "./paper-curl";
+import { CREST_RADIUS, paperCurlProfile } from "@/lib/paper-curl";
 import { RetroCounter } from "./retro-counter";
 import { TYPE_SIZES, typeSize } from "@/lib/type-size";
 import { inspectorPlacement, sceneRectangle } from "@/lib/desk-scene";
@@ -1989,6 +1990,7 @@ export default function Deckle({ userId }: { userId: string | null }) {
     feed * lineHeight -
     (presented ? PRESENT * lineHeight : 0);
   const stripHeight = LEAD + metrics.height + paperWindowHeight + 120;
+  const paperCurl = paperCurlProfile(paperY);
   const activeId = practiceDoc
     ? "setup-practice"
     : store?.active.id || "loading";
@@ -2242,6 +2244,12 @@ export default function Deckle({ userId }: { userId: string | null }) {
             >
               <div
                 className={`paper-impact ${strikes ? `jolt-${strikes % 2}` : ""}`}
+                style={
+                  {
+                    "--crest-inset": `${(paperCurl.crest / CREST_RADIUS) * 8}%`,
+                    "--crest-depth": `${paperCurl.crest * 4}px`,
+                  } as CSSProperties
+                }
               >
                 <div className="paper-flat">
                   <div

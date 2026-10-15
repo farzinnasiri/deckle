@@ -43,19 +43,18 @@ npm run build
 
 ## Deployment
 
-The public app runs on Vercel. GitHub's `main` branch is the production branch; pushes to `main` automatically build and deploy the app and its Convex functions. Other branches receive Vercel previews using separately configured development services.
+The public app runs on Vercel. GitHub's `main` branch is the production branch; pushes to `main` automatically build and deploy the app. Local development, Vercel previews, and the public app currently share the development Clerk instance and Convex deployment.
 
-For your own deployment, import the repository into Vercel and configure these Production variables:
+For your own deployment, import the repository into Vercel and configure these variables in Development, Preview, and Production:
 
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` from a production Clerk instance.
-- `APP_URL`, the canonical HTTPS app origin. Redirect other public hostnames to this origin so accounts and browser storage share one address.
-- `CONVEX_DEPLOY_KEY` for a separate production Convex deployment.
-- `CONVEX_SITE_URL`, that deployment's HTTP site URL.
-- `DECKLE_BRIDGE_SECRET`, matching the secret configured in production Convex.
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` from the same development Clerk instance.
+- `NEXT_PUBLIC_CONVEX_URL`, the development Convex deployment's cloud URL.
+- `CONVEX_SITE_URL` and `NEXT_PUBLIC_CONVEX_SITE_URL`, that development deployment's HTTP site URL.
+- `DECKLE_BRIDGE_SECRET`, matching the secret configured in development Convex.
 
-The checked-in Vercel build command deploys Convex before completing the production release. Preview builds never deploy the production backend. Configure Preview with development Clerk keys, a development Convex site URL, and its matching bridge secret. Omit `APP_URL` in Preview so requests use the preview origin.
+Set `APP_URL` to the canonical HTTPS origin in Vercel Production and your local origin in `.env.local`. Omit it in Preview so requests use the preview origin. The checked-in Vercel build command builds the app without deploying Convex. Use `npx convex dev --once` to sync development backend changes. No production Clerk or Convex credentials are needed for the current setup.
 
-Clerk production requires a domain you own and verified DNS. Social sign-in providers require your own production OAuth credentials. Local writing works without signing in.
+Google and Apple sign-in use Clerk's shared development OAuth credentials. Local writing works without signing in.
 
 ## Project map
 

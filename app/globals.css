@@ -8011,63 +8011,67 @@ body {
   height: var(--paper-window-height);
   clip-path: inset(-68px -70px 0 -70px);
 }
-/* Keep the flat roll clipped at the desk edge; the crest's occlusion shadow may rise just above it. */
-.paper-flat { position: absolute; inset: 0; overflow: clip; overflow-clip-margin: 70px; clip-path: inset(0 -70px 0 -70px); }
-/* Excess sheet rolls back over a crest at the clip line. Seen from the front,
-   the crest is a clean horizon: its torn edge is behind the bend, fibres
-   foreshorten, and the writing turns away from the reader. The top of the
-   bend faces the ceiling and the pendant, so it is the brightest part of the
-   sheet; the last pixel is seen edge-on and darkens. */
+/* The upper corners recede while the full-width sheet approaches the reader.
+   Clip the actual paper and ink together so the desk shows beside the bend. */
+.paper-flat {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  clip-path: inset(
+    0 round var(--crest-inset, 0%) var(--crest-inset, 0%) 0 0 /
+      var(--crest-depth, 0px) var(--crest-depth, 0px) 0 0
+  );
+}
+/* A broad bend, with the same silhouette as the sheet below, gives the side
+   edges visible depth. Its highlights and compressed fibres fade into the
+   flat writing surface rather than forming a separate horizontal band. */
 .paper-crest {
   position: absolute;
   z-index: 4;
   top: 0;
   left: 0;
   right: 0;
-  height: var(--crest);
+  height: var(--crest-depth);
   pointer-events: none;
   transition: opacity 180ms var(--mechanical-ease);
 }
 .paper-crest::before {
-  /* The sheet falling away behind the crest occludes the desk just above it. */
+  /* A soft contact shadow follows the narrowed crown. */
   content: "";
   position: absolute;
-  left: 0.5%;
-  right: 0.5%;
-  top: -9px;
-  height: 10px;
-  background: linear-gradient(to top, #0d070340, #0d070314 45%, transparent);
-  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
-  filter: blur(1.5px);
+  inset: 0;
+  border-radius: var(--crest-inset) var(--crest-inset) 0 0 / 100% 100% 0 0;
+  box-shadow: 0 -4px 10px #0d070333;
+  mask-image: linear-gradient(#000, transparent 85%);
 }
 .paper-crest-surface {
   position: absolute;
   inset: 0;
+  border-radius: var(--crest-inset) var(--crest-inset) 0 0 / 100% 100% 0 0;
   background-color: var(--paper, #f0e9d6);
   background-image:
     linear-gradient(
       180deg,
-      #3d2c1c4d 0,
-      #3d2c1c1a 1.5px,
-      rgb(255 252 242 / calc(0.16 + var(--desk-light-intensity, 0) * 0.24)) 18%,
-      rgb(255 252 242 / calc(0.1 + var(--desk-light-intensity, 0) * 0.12)) 40%,
-      transparent 70%,
-      #4a37220a 86%,
+      #3d2c1c66 0,
+      #3d2c1c24 1px,
+      rgb(255 252 242 / calc(0.14 + var(--desk-light-intensity, 0) * 0.24)) 12%,
+      rgb(255 252 242 / calc(0.08 + var(--desk-light-intensity, 0) * 0.12)) 32%,
+      #4a372210 66%,
       transparent
     ),
-    linear-gradient(90deg, #75603d0c, transparent 3%, transparent 97%, #75603d10),
+    linear-gradient(90deg, #75603d24, transparent 10%, transparent 90%, #75603d2c),
     var(--paper-texture, url("/textures/paper-cotton.png"));
   /* Fibres on the bend are seen at an angle, so the grain compresses vertically. */
   background-size:
     100% 100%,
     100% 100%,
-    420px 140px;
+    420px 180px;
   background-position:
     0 0,
     0 0,
     0 var(--crest-feed, 0px);
   background-blend-mode: normal, multiply, multiply;
-  mask-image: linear-gradient(to bottom, #000 0, #000 48%, #000a 70%, #0003 88%, transparent);
+  mask-image: linear-gradient(to bottom, #000 0, #000 25%, #000b 55%, #0003 82%, transparent);
 }
 .reduce-motion .paper-crest { transition: none; }
 @media(prefers-reduced-motion:reduce) { .paper-crest { transition: none; } }
@@ -13954,7 +13958,7 @@ button.head-body:disabled {
 .desk-refined.immersive .desk-objects { transition-delay: 60ms; }
 .desk-refined.reduce-motion :is(.desk-objects,.pendant-lamp,.pull-cord,.wall-toggle-switch,.activity-meter,.desk-clock,.desk-front,.desk-control,.machine-face,.machine-front,.machine-foot) { transition: none; }
 @media(prefers-reduced-motion:reduce) { .desk-refined :is(.desk-objects,.pendant-lamp,.pull-cord,.wall-toggle-switch,.activity-meter,.desk-clock,.desk-front,.desk-control,.machine-face,.machine-front,.machine-foot) { transition: none; } }
-@media(max-width:700px) { .desk-refined .paper-window { clip-path: inset(-68px -6px 0 -6px); } .paper-flat { clip-path: inset(0 -6px 0 -6px); } }
+@media(max-width:700px) { .desk-refined .paper-window { clip-path: inset(-68px -6px 0 -6px); } }
 
 /* =========================================================================
    Models 4–6. Each machine carries its body material into the control face,
