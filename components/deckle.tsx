@@ -9,7 +9,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { ArrowDown } from "lucide-react";
+import { ArrowDown, Check, SlidersHorizontal, Type, X } from "lucide-react";
 import {
   addedLines,
   defaultPaper,
@@ -50,6 +50,7 @@ import {
 import { useDeskStorage } from "./desk-storage-provider";
 import { useCloudStorage } from "./storage-settings";
 import { useLayoutMotion } from "./use-layout-motion";
+import { useMobileWorkspace } from "./use-mobile-workspace";
 import { DeskFocusGuide, type DeskFocus } from "./desk-focus-guide";
 import { visibleControls } from "@/lib/desk-layout";
 import { ActivityMeter } from "./activity-meter";
@@ -101,6 +102,7 @@ import { PasteTag, type PasteTagState } from "./paste-tag";
 import { CopyHolder } from "./copy-holder";
 import { SelectionBar, type SelectionCommand } from "./selection-bar";
 import {
+  caretOffset,
   editingText,
   editorMarks,
   indexAtOffset,
@@ -109,6 +111,8 @@ import {
 } from "@/lib/editor-model";
 import { ReferenceCard, type ReferenceTab } from "./reference-card";
 import { PaperTitle } from "./paper-title";
+import { Ghostwriter, GHOSTWRITER_MIN_REACH } from "./ghostwriter";
+import type { FeatureFlags } from "@/lib/features";
 
 // The roll feeds upward while the typing line stays just above the slot.
 const WINDOW_H = 680;
@@ -154,7 +158,13 @@ function selectionStyles(doc: WritingDocument) {
     code: all((m) => !!m.code),
   };
 }
-export default function Deckle({ userId }: { userId: string | null }) {
+export default function Deckle({
+  userId,
+  features,
+}: {
+  userId: string | null;
+  features: FeatureFlags;
+}) {
   const storage = useDeskStorage();
   const { loadStore, saveStore, flushStore, hydratePiece, archiveStore } =
     storage;
@@ -183,6 +193,11 @@ export default function Deckle({ userId }: { userId: string | null }) {
   const [settingsClosing, setSettingsClosing] = useState(false);
   const deskStage = useRef<HTMLDivElement>(null);
   const deskRoot = useRef<HTMLElement>(null);
+  const mobileView = useMobileWorkspace(deskRoot);
+  const mobileDesk = useRef<HTMLDivElement>(null);
+  const mobileTools = useRef<HTMLDivElement>(null);
+  const [deskView, setDeskView] = useState({ scale: 1, x: 0 });
+  const { scale: deskScale, x: deskX } = deskView;
   const [sceneView, setSceneView] = useState({ scale: 1, x: 0, y: 0 });
   // The copy holder stands on the left; the desk makes room the same way it
   // does for settings on the right.
@@ -285,6 +300,20 @@ export default function Deckle({ userId }: { userId: string | null }) {
   const [lifting, setLifting] = useState(false);
   const [pulled, setPulled] = useState(0);
   const writer = useRef<EditorHandle>(null);
+  const [ghostWorking, setGhostWorking] = useState(false);
+  const [ghostOpen, setGhostOpen] = useState(false);
+  const [ghostReviewLayout, setGhostReviewLayout] = useState({
+    visible: false,
+    height: 0,
+  });
+  const reviewLayout = useCallback(
+    (next: { visible: boolean; height: number }) => {
+      setGhostReviewLayout((old) =>
+        old.visible === next.visible && old.height === next.height ? old : next,
+      );
+    },
+    [],
+  );
   const lastKey = useRef(0);
   const paperViewport = useRef<HTMLDivElement>(null);
   const archiveTray = useRef<HTMLButtonElement>(null);
@@ -363,7 +392,9 @@ export default function Deckle({ userId }: { userId: string | null }) {
         : holderFramed
           ? holderView
           : null;
-  const sceneScale = camera ? camera.scale : settings?.immersive ? 1.12 : 1;
+  const restingScale = deskScale * (settings?.immersive ? 1.12 : 1);
+  const restingX = settings?.immersive ? 0 : deskX;
+  const sceneScale = camera ? camera.scale : restingScale;
   const holderPulled =
     holderDragging && !inspecting && !settings?.immersive && !modal;
   // The same camera written as CSS, for the desk, the lamp, the cord and
@@ -375,10 +406,10 @@ export default function Deckle({ userId }: { userId: string | null }) {
       (view.scale - 1);
   const cameraCss = holderPulled
     ? {
-        x: `calc(var(--holder-pull, 0) * ${holderView.x}px)`,
+        x: `calc(${deskX}px + var(--holder-pull, 0) * ${holderView.x - deskX}px)`,
         y: `calc(var(--holder-pull, 0) * ${holderView.y}px)`,
-        scale: `calc(1 + var(--holder-pull, 0) * ${holderView.scale - 1})`,
-        cord: `calc(var(--holder-pull, 0) * ${cordShift(holderView)}px)`,
+        scale: `calc(${deskScale} + var(--holder-pull, 0) * ${holderView.scale - deskScale})`,
+        cord: `calc(${cordShift(deskView)}px + var(--holder-pull, 0) * ${cordShift(holderView) - cordShift(deskView)}px)`,
       }
     : camera
       ? {
@@ -387,12 +418,13 @@ export default function Deckle({ userId }: { userId: string | null }) {
           scale: `${camera.scale}`,
           cord: `${cordShift(camera)}px`,
         }
-      : null;
-  const deskTransform = cameraCss
-    ? `translate(${cameraCss.x}, ${cameraCss.y}) scale(${cameraCss.scale})`
-    : settings?.immersive
-      ? "scale(1.12)"
-      : "none";
+      : {
+          x: `${restingX}px`,
+          y: "0px",
+          scale: `${restingScale}`,
+          cord: `${cordShift({ x: restingX, scale: restingScale })}px`,
+        };
+  const deskTransform = `translate(${cameraCss.x}, ${cameraCss.y}) scale(${cameraCss.scale})`;
   const controls = visibleControls(settings);
   const reduced = Boolean(systemReduce || settings?.reduceMotion);
   useLayoutMotion(
@@ -481,7 +513,12 @@ export default function Deckle({ userId }: { userId: string | null }) {
               enrolled: true,
             },
           };
-          writer.current?.clearHistory();
+          if (
+            current.current?.active.id !== loaded.active.id ||
+            JSON.stringify(current.current?.active.document.marks) !==
+              JSON.stringify(loaded.active.document.marks)
+          )
+            writer.current?.clearHistory();
           setClock(new Date());
           current.current = loaded;
           setStore(loaded);
@@ -517,7 +554,7 @@ export default function Deckle({ userId }: { userId: string | null }) {
             event.ctrlKey ||
             event.altKey ||
             target.closest?.(
-              "input, select, button, .desk-controls, .reference-card, .desk-clock",
+              "input, textarea, select, button, .desk-controls, .reference-card, .desk-clock",
             )
           )
             return;
@@ -665,7 +702,8 @@ export default function Deckle({ userId }: { userId: string | null }) {
           editingText(s.active.document),
           editingText(candidate.document),
         ) &&
-        event.action !== "restore"
+        event.action !== "restore" &&
+        event.origin !== "ghost"
       ) {
         setNotice(
           `Paper full · ${PAPER_LINE_LIMIT} lines. Save to archive for a fresh sheet.`,
@@ -702,13 +740,16 @@ export default function Deckle({ userId }: { userId: string | null }) {
         day: localDay(),
         linesToday:
           (s.day === localDay() ? s.linesToday : 0) +
-          addedLines(s.active.document, active.document),
+          (event.origin === "ghost"
+            ? 0
+            : addedLines(s.active.document, active.document)),
         // Moving your own words, or having a fragment typed in for you, is
         // not new writing for today's count.
         activity:
           ["type", "paste"].includes(event.action) &&
           event.origin !== "move" &&
-          event.origin !== "retype"
+          event.origin !== "retype" &&
+          event.origin !== "ghost"
             ? recordWriting(s.activity, localDay(), event.key)
             : settleActivity(s.activity, localDay()),
       });
@@ -793,6 +834,7 @@ export default function Deckle({ userId }: { userId: string | null }) {
       range: EditRange,
       selection: TextSelection,
       origin?: EditOrigin,
+      style?: MarkStyle,
     ) => {
       const s = current.current;
       if (!s) return { marks: [], cursor: 0 };
@@ -814,6 +856,7 @@ export default function Deckle({ userId }: { userId: string | null }) {
         range,
         selection,
         ...(origin ? { origin } : {}),
+        ...(style ? { style } : {}),
       };
       lastKey.current = event.at;
       return apply(event) || s.active.document;
@@ -834,14 +877,19 @@ export default function Deckle({ userId }: { userId: string | null }) {
       if (!s) return { marks: [], cursor: 0 };
       const doc = practice.current ?? s.active.document,
         selection = doc.selection || {
-          anchor: editingText(doc).length,
-          head: editingText(doc).length,
+          anchor: caretOffset(doc),
+          head: caretOffset(doc),
         };
       const range = {
         from: Math.min(selection.anchor, selection.head),
         to: Math.max(selection.anchor, selection.head),
       };
-      if (command === "h1" || command === "h2" || command === "dinkus") {
+      if (
+        command === "body" ||
+        command === "h1" ||
+        command === "h2" ||
+        command === "dinkus"
+      ) {
         if (command === "dinkus" && range.from === range.to) {
           const text = editingText(doc),
             prefix =
@@ -1034,9 +1082,11 @@ export default function Deckle({ userId }: { userId: string | null }) {
     return rect ? { top: rect.top, bottom: rect.bottom } : null;
   }, []);
 
+  // Resizing the desk changes the visible window, not the paper's top margin.
+  const paperLead = LEAD;
   const feedLimits = (m: PaperMetrics) => ({
     min: -Math.max(0, Math.round((m.height - m.headTop) / m.lineHeight) - 1),
-    max: Math.max(0, Math.ceil((m.headTop + LEAD * 0.7) / m.lineHeight)),
+    max: Math.max(0, Math.ceil((m.headTop + paperLead * 0.7) / m.lineHeight)),
   });
   const setFeedValue = useCallback((value: number) => {
     const { min, max } = feedLimits(metricsRef.current);
@@ -1055,19 +1105,56 @@ export default function Deckle({ userId }: { userId: string | null }) {
     const stage = deskStage.current;
     if (!stage) return;
     const measure = () => {
+      const machineNode = stage.querySelector<HTMLElement>(".machine");
+      const machineWidth = machineNode?.offsetWidth ?? stage.offsetWidth;
+      const sideDesktop =
+        features.ghostwriter && !mobileView.mobile && window.innerHeight >= 480;
+      const sideReach = GHOSTWRITER_MIN_REACH;
+      // Reserve the compact drawer and proofreader in the resting frame.
+      // Showing suggestions must never change the desk's position or scale.
+      const scale = sideDesktop
+        ? Math.min(1.1, (window.innerWidth - 48) / (machineWidth + sideReach))
+        : 1;
+      const x = sideDesktop
+        ? -Math.max(
+            0,
+            (machineWidth / 2 + sideReach) * scale - window.innerWidth / 2 + 24,
+          )
+        : 0;
+      setDeskView((old) =>
+        old.scale === scale && old.x === x ? old : { scale, x },
+      );
       // Reserve the real height of the selected mechanisms, including wrapped
       // rows, so the inspector never covers a light control on a narrow desk.
-      const machineNode = stage.querySelector<HTMLElement>(".machine");
-      if (window.innerWidth <= 700 && machineNode) {
+      if (machineNode) {
+        const desk = stage.closest("main")!;
+        const paddingTop = parseFloat(getComputedStyle(desk).paddingTop);
+        const archive = desk.querySelector<HTMLElement>(".desk-front");
+        const archiveSpace = archive
+          ? archive.offsetHeight + parseFloat(getComputedStyle(archive).bottom)
+          : 64;
         setPaperWindowHeight(
-          Math.max(
-            64,
-            Math.min(
-              WINDOW_H,
-              window.innerHeight * 0.52,
-              window.innerHeight - machineNode.offsetHeight - 170,
-            ),
-          ),
+          mobileView.mobile
+            ? Math.max(
+                64,
+                mobileView.height -
+                  machineNode.offsetHeight -
+                  paddingTop -
+                  ghostReviewLayout.height -
+                  (mobileView.keyboard || ghostReviewLayout.height ? 12 : 82),
+              )
+            : Math.max(
+                64,
+                Math.min(
+                  WINDOW_H,
+                  window.innerWidth <= 700
+                    ? window.innerHeight * 0.52
+                    : WINDOW_H,
+                  (window.innerHeight - paddingTop - archiveSpace - 24) /
+                    scale -
+                    machineNode.offsetHeight,
+                ),
+              ),
         );
       }
       // Keep the full machine layout. A single camera transform makes room for
@@ -1079,6 +1166,7 @@ export default function Deckle({ userId }: { userId: string | null }) {
         height: window.innerHeight,
         stageWidth: stage.offsetWidth,
         contentHeight,
+        maxScale: scale,
         paddingTop: parseFloat(
           getComputedStyle(stage.closest("main")!).paddingTop,
         ),
@@ -1100,6 +1188,7 @@ export default function Deckle({ userId }: { userId: string | null }) {
           getComputedStyle(stage.closest("main")!).paddingTop,
         ),
         side: "left",
+        maxScale: scale,
       });
       setHolderView((old) =>
         old.scale === holder.scale && old.x === holder.x && old.y === holder.y
@@ -1164,6 +1253,8 @@ export default function Deckle({ userId }: { userId: string | null }) {
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(stage);
+    const machine = stage.querySelector(".machine");
+    if (machine) observer.observe(machine);
     const face = stage.querySelector(".machine-face");
     if (face) observer.observe(face);
     window.addEventListener("resize", measure);
@@ -1182,6 +1273,11 @@ export default function Deckle({ userId }: { userId: string | null }) {
     deskFocus,
     controls.join("/"),
     settings?.immersive,
+    mobileView.mobile,
+    mobileView.height,
+    mobileView.keyboard,
+    ghostReviewLayout.height,
+    features.ghostwriter,
   ]);
   const paperMetrics = useCallback(
     (next: PaperMetrics, reason: MeasureReason) => {
@@ -1295,23 +1391,18 @@ export default function Deckle({ userId }: { userId: string | null }) {
       stage = deskStage.current;
     if (!root || !stage) return;
     cameraMoves();
-    const transform = view
-      ? `translate(${view.x}px, ${view.y}px) scale(${view.scale})`
-      : settings?.immersive
-        ? "scale(1.12)"
-        : "none";
+    const target = view ?? { x: restingX, y: 0, scale: restingScale };
+    const transform = `translate(${target.x}px, ${target.y}px) scale(${target.scale})`;
     stage.style.transform = transform;
     root
       .querySelectorAll<HTMLElement>(".desk-light-map")
       .forEach((map) => (map.style.transform = transform));
     const lamp = root.querySelector<HTMLElement>(".pendant-lamp");
     if (lamp)
-      lamp.style.transform = view
-        ? `translateX(-50%) translateX(${view.x}px) scale(${view.scale})`
-        : "translateX(-50%)";
+      lamp.style.transform = `translateX(-50%) translateX(${target.x}px) scale(${target.scale})`;
     const cord = root.querySelector<HTMLElement>(".pull-cord");
     if (cord && !settings?.immersive)
-      cord.style.translate = view ? `${cordShift(view)}px 0` : "0 0";
+      cord.style.translate = `${cordShift(target)}px 0`;
   }
   // React applies a click's state at once, in the same task, so a heavy
   // render would still hold the first frame of the move. The state follows
@@ -1319,11 +1410,23 @@ export default function Deckle({ userId }: { userId: string | null }) {
   const afterFirstFrame = (run: () => void) =>
     requestAnimationFrame(() => setTimeout(run, 0));
   function toggleHolder(open = !holderOpen, pulled = false) {
-    if (!inspecting)
+    const change = () => {
+      if (open) setGhostOpen(false);
+      setHolderOpen(open);
+    };
+    if (!inspecting && !mobileView.mobile)
       aimCamera(open && !settings?.immersive && !modal ? holderView : null);
     // The drawer leaves with the desk; React writes the same class after.
     document.querySelector(".copy-holder")?.classList.toggle("is-open", open);
-    afterFirstFrame(() => setHolderOpen(open));
+    if (mobileView.mobile) {
+      // The phone sheet opens immediately. Enable its input before moving
+      // focus, within the same tap that is allowed to open the keyboard.
+      flushSync(change);
+      const notes =
+        document.querySelector<HTMLTextAreaElement>(".copy-holder-text");
+      if (open) notes?.focus({ preventScroll: true });
+      else notes?.blur();
+    } else afterFirstFrame(change);
     localStorage.setItem("deckle:copy-holder", open ? "open" : "closed");
     void machineAudio.unlock().then(() => {
       // A pulled drawer is already mostly out: only the latch is left.
@@ -1331,9 +1434,11 @@ export default function Deckle({ userId }: { userId: string | null }) {
       // Fully out, the drawer latches.
       if (open) setTimeout(() => machineAudio.clipSnap(), pulled ? 200 : 460);
     });
-    if (!open) setTimeout(() => writer.current?.focus(), 0);
+    if (!open && !mobileView.mobile)
+      setTimeout(() => writer.current?.focus(), 0);
   }
   const pullHolder = useCallback((pull: number | null) => {
+    if (pull !== null && pull > 0) setGhostOpen(false);
     if (pull === null) {
       setHolderDragging(false);
       cameraMoves();
@@ -1359,6 +1464,10 @@ export default function Deckle({ userId }: { userId: string | null }) {
   }
   function openReference(tab: ReferenceTab = "Settings") {
     if (settingsClosing) return;
+    if (mobileView.mobile) {
+      mobileTools.current?.hidePopover();
+      mobileDesk.current?.hidePopover();
+    }
     if (!manual && !onboardingOpen) aimCamera(sceneView);
     afterFirstFrame(() => {
       setReferenceTab(tab);
@@ -1769,6 +1878,7 @@ export default function Deckle({ userId }: { userId: string | null }) {
       if (
         !onPaper &&
         (target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
           target.closest?.(
             "button, select, [role='slider'], [role='switch'], .reference-card, .desk-controls",
           ))
@@ -1806,6 +1916,7 @@ export default function Deckle({ userId }: { userId: string | null }) {
       if (target.closest(".desk-clock, .desk-controls")) return;
       if (
         target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
         target instanceof HTMLSelectElement
       )
         return;
@@ -1969,6 +2080,11 @@ export default function Deckle({ userId }: { userId: string | null }) {
 
   const writingDoc = practiceDoc ??
     store?.active.document ?? { marks: [], cursor: 0 };
+  const caret = caretOffset(writingDoc);
+  const currentLine = documentLines(writingDoc).find(
+    (line) => line.from <= caret && line.to >= caret,
+  );
+  const inSection = currentLine?.block === "h1" || currentLine?.block === "h2";
   const paperCounts = useMemo(
     () => ({
       lines: paperLineCount(writingDoc),
@@ -1985,11 +2101,11 @@ export default function Deckle({ userId }: { userId: string | null }) {
     paperWindowHeight -
     PRINT_GAP -
     lineHeight -
-    LEAD -
+    paperLead -
     metrics.headTop +
     feed * lineHeight -
     (presented ? PRESENT * lineHeight : 0);
-  const stripHeight = LEAD + metrics.height + paperWindowHeight + 120;
+  const stripHeight = paperLead + metrics.height + paperWindowHeight + 120;
   const paperCurl = paperCurlProfile(paperY);
   const activeId = practiceDoc
     ? "setup-practice"
@@ -2063,6 +2179,7 @@ export default function Deckle({ userId }: { userId: string | null }) {
           "--scene-scale": sceneScale,
           "--type-size": `${TYPE_SIZES[typeSize(settings ?? { largeType: false }) - 1].pixels}px`,
           "--paper-window-height": `${paperWindowHeight}px`,
+          "--paper-lead": `${paperLead}px`,
           "--top-light-x": `${railLight.x}px`,
           "--top-light-y": "54px",
           "--rail-light-width": `${railLight.width}px`,
@@ -2087,8 +2204,11 @@ export default function Deckle({ userId }: { userId: string | null }) {
       data-customizing={manual ? referenceTab.toLowerCase() : undefined}
       data-desk-focus={deskFocus || undefined}
       data-guided={onboardingOpen || undefined}
+      data-mobile={mobileView.mobile || undefined}
+      data-ghost-review-docked={!!ghostReviewLayout.height || undefined}
+      data-keyboard={mobileView.keyboard || undefined}
       data-setup-lesson={setupLesson || undefined}
-      className={`desk desk-refined ${manual || onboardingOpen ? "settings-open" : ""} ${roomLight ? "room-light-on" : "room-light-off"} ${lampsOn ? "lamp-active" : "lamp-off"} ${lampsOn ? "lamplight" : "daylight"} ${railIntensity > 0 ? "rail-light-on" : ""} ${reduced ? "reduce-motion" : ""} ${`surface-${settings?.desk || "cherry"} light-${light}`} ${drawer && !drawerClosing ? "drawer-is-open" : ""}  ${settings?.immersive ? "immersive" : ""} ${holderShown ? "holder-open" : ""} ${holderPulled ? "holder-dragging" : ""}`}
+      className={`desk desk-refined ${ghostWorking ? "ghostwriter-working" : ""} ${manual || onboardingOpen ? "settings-open" : ""} ${roomLight ? "room-light-on" : "room-light-off"} ${lampsOn ? "lamp-active" : "lamp-off"} ${lampsOn ? "lamplight" : "daylight"} ${railIntensity > 0 ? "rail-light-on" : ""} ${reduced ? "reduce-motion" : ""} ${`surface-${settings?.desk || "cherry"} light-${light}`} ${drawer && !drawerClosing ? "drawer-is-open" : ""}  ${settings?.immersive ? "immersive" : ""} ${holderShown ? "holder-open" : ""} ${holderPulled ? "holder-dragging" : ""}`}
     >
       <svg className="ink-defs" width="0" height="0" aria-hidden="true">
         <filter id="ink-edge" x="-2%" y="-2%" width="104%" height="104%">
@@ -2106,9 +2226,7 @@ export default function Deckle({ userId }: { userId: string | null }) {
         type="button"
         className={`pendant-lamp ${deskIntensity > 0 ? "is-lit" : ""}`}
         style={{
-          transform: cameraCss
-            ? `translateX(-50%) translateX(${cameraCss.x}) scale(${cameraCss.scale})`
-            : "translateX(-50%)",
+          transform: `translateX(-50%) translateX(${cameraCss.x}) scale(${cameraCss.scale})`,
         }}
         aria-label={
           deskIntensity > 0 ? "Turn off the top lamp" : "Turn on the top lamp"
@@ -2123,57 +2241,99 @@ export default function Deckle({ userId }: { userId: string | null }) {
       </button>
       <div className="window-light" aria-hidden="true" />
       <div className="room-ambient-veil" aria-hidden="true" />
-      {settings && (
-        <DeskControls
-          settings={settings}
-          disabled={modal || !store?.uncovered}
-          update={updateSettings}
-          onSettings={() => openReference()}
-          onShare={() => store && setSharing(store.active)}
-          onCopy={() => {
-            if (!current.current) return;
-            void copyPaper(current.current.active.document)
-              .then((result) =>
-                setNotice(
-                  result === "formatted"
-                    ? "Paper copied with formatting."
-                    : "Paper copied as plain text.",
-                ),
-              )
-              .catch((error) =>
-                setNotice(
-                  error instanceof Error
-                    ? error.message
-                    : "The paper could not be copied.",
-                ),
-              );
-          }}
-          onFocus={() => {
-            machineAudio.hush(!settings.immersive);
-            if (!settings.immersive && holderOpen) toggleHolder(false);
-            updateSettings({ immersive: !settings.immersive });
-            writer.current?.focus();
-          }}
-        />
-      )}
-      {store && (
-        <RoomWallSwitch
-          on={roomLight}
-          hidden={!!settings?.immersive || (modal && !lightInteraction)}
-          onToggle={() => updateSettings({ roomLight: !roomLight })}
-        />
-      )}
-      {store && (
-        <ActivityMeter
-          activity={settleActivity(store.activity, localDay())}
-          lines={store.linesToday}
-          hidden={modal && !batteryLesson}
-          guidedOpen={batteryLesson ? setupBatteryOpen : undefined}
-          onOpenChange={batteryLesson ? setSetupBatteryOpen : undefined}
-          retired={!!settings?.immersive}
-          reducedMotion={reduced}
-        />
-      )}
+      <button
+        type="button"
+        className="mobile-desk-open mobile-only"
+        popoverTarget="mobile-desk"
+        disabled={modal || !store?.uncovered}
+        aria-label="Open desk controls"
+      >
+        <SlidersHorizontal size={17} aria-hidden="true" /> Desk
+      </button>
+      <div
+        ref={mobileDesk}
+        id="mobile-desk"
+        className="mobile-desk-sheet"
+        popover={mobileView.mobile && !onboardingOpen ? "auto" : undefined}
+        onBeforeToggle={(event) => {
+          if (event.newState === "open") {
+            (document.activeElement as HTMLElement | null)?.blur();
+            if (holderOpen) toggleHolder(false);
+          }
+        }}
+        onClickCapture={(event) => {
+          if (
+            mobileView.mobile &&
+            (event.target as Element).closest("button[data-layout-control]")
+          )
+            mobileDesk.current?.hidePopover();
+        }}
+      >
+        <header className="mobile-sheet-heading mobile-only">
+          <span>The desk</span>
+          <button
+            type="button"
+            popoverTarget="mobile-desk"
+            popoverTargetAction="hide"
+            aria-label="Close desk controls"
+          >
+            <X size={20} />
+          </button>
+        </header>
+        {settings && (
+          <DeskControls
+            settings={settings}
+            disabled={modal || !store?.uncovered}
+            update={updateSettings}
+            onSettings={() => openReference()}
+            onShare={() => store && setSharing(store.active)}
+            onCopy={() => {
+              if (!current.current) return;
+              void copyPaper(current.current.active.document)
+                .then((result) =>
+                  setNotice(
+                    result === "formatted"
+                      ? "Paper copied with formatting."
+                      : "Paper copied as plain text.",
+                  ),
+                )
+                .catch((error) =>
+                  setNotice(
+                    error instanceof Error
+                      ? error.message
+                      : "The paper could not be copied.",
+                  ),
+                );
+            }}
+            onFocus={() => {
+              machineAudio.hush(!settings.immersive);
+              if (!settings.immersive && holderOpen) toggleHolder(false);
+              updateSettings({ immersive: !settings.immersive });
+              writer.current?.focus();
+            }}
+          />
+        )}
+      </div>
+      <div className="mobile-room-controls">
+        {store && (
+          <RoomWallSwitch
+            on={roomLight}
+            hidden={!!settings?.immersive || (modal && !lightInteraction)}
+            onToggle={() => updateSettings({ roomLight: !roomLight })}
+          />
+        )}
+        {store && (
+          <ActivityMeter
+            activity={settleActivity(store.activity, localDay())}
+            lines={store.linesToday}
+            hidden={modal && !batteryLesson}
+            guidedOpen={batteryLesson ? setupBatteryOpen : undefined}
+            onOpenChange={batteryLesson ? setSetupBatteryOpen : undefined}
+            retired={!!settings?.immersive}
+            reducedMotion={reduced}
+          />
+        )}
+      </div>
       {sharing && (
         <SharePaper
           piece={sharing}
@@ -2193,11 +2353,7 @@ export default function Deckle({ userId }: { userId: string | null }) {
         key={pulled}
         className={`pull-cord ${pulled ? "pulled" : ""}`}
         style={{
-          translate: settings?.immersive
-            ? "0 -110%"
-            : cameraCss
-              ? `${cameraCss.cord} 0`
-              : "0 0",
+          translate: settings?.immersive ? "0 -110%" : `${cameraCss.cord} 0`,
         }}
         inert={settings?.immersive || undefined}
         onClick={pullCord}
@@ -2390,6 +2546,14 @@ export default function Deckle({ userId }: { userId: string | null }) {
                               x,
                             }))
                           }
+                          onGhostVoice={(text) => {
+                            const column = metricsRef.current.headColumn;
+                            if (!text) machineAudio.correction(column);
+                            else if (text === "\n")
+                              machineAudio.carriageReturn(column);
+                            else if (text === " ") machineAudio.space(column);
+                            else machineAudio.strike(text, column);
+                          }}
                           onFocus={() => {
                             void machineAudio.unlock();
                           }}
@@ -2622,9 +2786,25 @@ export default function Deckle({ userId }: { userId: string | null }) {
               </div>
             </div>
             <div
+              ref={mobileTools}
+              id="mobile-writing-tools"
               className="machine-face"
+              popover={
+                mobileView.mobile && !onboardingOpen ? "auto" : undefined
+              }
               inert={settings?.immersive || undefined}
             >
+              <header className="mobile-sheet-heading mobile-only">
+                <span>Writing tools</span>
+                <button
+                  type="button"
+                  popoverTarget="mobile-writing-tools"
+                  popoverTargetAction="hide"
+                  aria-label="Close writing tools"
+                >
+                  <X size={20} />
+                </button>
+              </header>
               <div className="faceplate" aria-hidden="true" />
               <div
                 className="deck-format-controls"
@@ -2721,16 +2901,27 @@ export default function Deckle({ userId }: { userId: string | null }) {
                   </button>
                   <button
                     type="button"
-                    className="deck-mech-btn mech-heading"
+                    className={`deck-mech-btn mech-heading ${inSection ? "is-latched" : ""}`}
                     onMouseDown={(e) => e.preventDefault()}
                     {...keyVoice(0.15)}
-                    onClick={() => writer.current?.format("h1")}
-                    title="Section Heading (#)"
-                    aria-label="Section heading"
+                    onClick={() =>
+                      writer.current?.format(inSection ? "body" : "h1")
+                    }
+                    title={
+                      inSection
+                        ? "Return to normal text"
+                        : "Section heading (#)"
+                    }
+                    aria-label={
+                      inSection ? "Normal paragraph" : "Section heading"
+                    }
+                    aria-pressed={inSection}
                     data-layout-control="section"
                     hidden={!controls.includes("section")}
                   >
-                    <span className="mech-label">Section</span>
+                    <span className="mech-label">
+                      {inSection ? "Paragraph" : "Section"}
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -2959,6 +3150,79 @@ export default function Deckle({ userId }: { userId: string | null }) {
               <span className="screw screw-left" />
               <span className="screw screw-right" />
             </div>
+            <div className="mobile-machine-bar">
+              <button
+                type="button"
+                className="mobile-machine-key mobile-only"
+                aria-label="Open writing tools"
+                disabled={
+                  modal ||
+                  readOnly ||
+                  !store?.uncovered ||
+                  !!settings?.immersive
+                }
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={(event) => {
+                  (document.activeElement as HTMLElement | null)?.blur();
+                  if (holderOpen) toggleHolder(false);
+                  mobileTools.current?.showPopover({
+                    source: event.currentTarget,
+                  });
+                  machineAudio.panel(true);
+                }}
+              >
+                <Type size={17} aria-hidden="true" />
+                <span>Tools</span>
+              </button>
+              {features.ghostwriter && (
+                <Ghostwriter
+                  writer={writer}
+                  document={writingDoc}
+                  pieceId={activeId}
+                  userId={userId}
+                  disabled={
+                    readOnly ||
+                    modal ||
+                    tearing ||
+                    !store?.uncovered ||
+                    !!settings?.immersive
+                  }
+                  reduced={reduced}
+                  machineView={deskView}
+                  open={ghostOpen}
+                  reviewHidden={holderOpen}
+                  onOpenChange={(open) => {
+                    setGhostOpen(open);
+                    if (open && holderOpen) toggleHolder(false);
+                  }}
+                  onWorking={setGhostWorking}
+                  onReviewLayout={reviewLayout}
+                />
+              )}
+              <button
+                type="button"
+                className="mobile-machine-key mobile-file-key mobile-only"
+                aria-label="File this paper"
+                hidden={!controls.includes("save")}
+                disabled={!canArchive || tearing || modal || readOnly}
+                onClick={finish}
+                {...(canArchive && !tearing ? keyVoice(0.55) : {})}
+              >
+                <i aria-hidden="true" />
+                <span>File</span>
+              </button>
+              <button
+                type="button"
+                className="mobile-machine-key mobile-done-key mobile-only"
+                aria-label="Dismiss keyboard"
+                onClick={() =>
+                  (document.activeElement as HTMLElement | null)?.blur()
+                }
+              >
+                <Check size={17} aria-hidden="true" />
+                <span>Done</span>
+              </button>
+            </div>
             <div className="machine-front" />
             <div className="machine-foot foot-left" />
             <div className="machine-foot foot-right" />
@@ -3114,6 +3378,7 @@ export default function Deckle({ userId }: { userId: string | null }) {
       )}
       {store && !settings?.immersive && (
         <CopyHolder
+          mobile={mobileView.mobile}
           key={`${store.active.id}${notesLesson ? ":setup-notes" : ""}`}
           open={notesLesson ? setupNotesOpen : holderOpen}
           hidden={modal && !notesLesson}
@@ -3132,6 +3397,7 @@ export default function Deckle({ userId }: { userId: string | null }) {
         />
       )}
       {selecting &&
+        !ghostWorking &&
         paperFocused &&
         !pointerHeld &&
         (!modal || editingLesson) &&

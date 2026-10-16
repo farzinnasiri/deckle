@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { DELETION_COOKIE, readDeletionReceipt } from "@/lib/account-deletion";
 import { backend } from "@/lib/cloud/backend";
+import { NO_FEATURES, type FeatureFlags } from "@/lib/features";
 export default async function Page() {
   if (
     readDeletionReceipt(
@@ -13,6 +14,7 @@ export default async function Page() {
   )
     redirect("/start-over");
   let { userId } = await auth();
+  let features = NO_FEATURES;
   if (
     userId &&
     (process.env.CONVEX_SITE_URL ?? process.env.NEXT_PUBLIC_CONVEX_SITE_URL) &&
@@ -40,6 +42,8 @@ export default async function Page() {
           }
           userId = null;
         }
+        if (userId)
+          features = await backend<FeatureFlags>("features", { userId });
       } else userId = null;
     } catch (error) {
       if (
@@ -52,5 +56,7 @@ export default async function Page() {
       /* Local writing remains available during a backend outage. */
     }
   }
-  return <AccountDesk key={userId ?? "local"} userId={userId} />;
+  return (
+    <AccountDesk key={userId ?? "local"} userId={userId} features={features} />
+  );
 }

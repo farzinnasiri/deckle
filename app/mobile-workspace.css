@@ -1,0 +1,699 @@
+/* The phone is a writing instrument with trays, rather than a wrapped desktop panel. */
+.mobile-only {
+  display: none;
+}
+.mobile-desk-sheet,
+.mobile-room-controls,
+.mobile-machine-bar {
+  display: contents;
+}
+
+@media (max-width: 700px),
+  (max-width: 900px) and (max-height: 500px) and (pointer: coarse) {
+  .mobile-only {
+    display: flex;
+  }
+  .desk-refined[data-mobile] {
+    position: fixed;
+    inset: var(--mobile-viewport-top, 0px) 0 auto;
+    width: 100%;
+    height: var(--mobile-viewport-height, 100dvh);
+    min-height: 0;
+    padding: calc(72px + env(safe-area-inset-top, 0px))
+      max(12px, env(safe-area-inset-right, 0px)) 0
+      max(12px, env(safe-area-inset-left, 0px));
+  }
+  .desk-refined[data-mobile] .desk-objects {
+    height: calc(var(--paper-window-height) + 112px);
+  }
+  .desk-refined[data-mobile]:not(.settings-open):not(.holder-open)
+    .desk-objects {
+    transform: none !important;
+  }
+  .desk-refined[data-mobile] .paper-window {
+    left: 8px;
+    width: calc(100% - 16px);
+    clip-path: inset(0 -4px 0 -4px);
+  }
+  .desk-refined[data-mobile] .paper-head {
+    top: calc(var(--paper-lead) - 170px + 36px);
+    left: 20px;
+    right: 20px;
+  }
+  .desk-refined[data-mobile] .paper-writing {
+    margin-inline: 20px;
+  }
+  .desk-refined[data-mobile] .paper-title {
+    font-size: max(16px, var(--type-size, 18px));
+  }
+  .desk-refined[data-mobile] .date-stamp {
+    font-size: 8px;
+  }
+  .desk-refined[data-mobile] .pendant-lamp {
+    --pendant-width: clamp(112px, calc(100vw - 208px), 240px);
+    left: 50%;
+    /* Keep the socket visible as the shade grows. */
+    top: calc(var(--pendant-width) * 0.375 - 46px);
+  }
+  .desk-refined[data-mobile] .desk-clock,
+  .desk-refined[data-mobile] .pull-cord {
+    display: none;
+  }
+  .mobile-desk-open {
+    position: absolute;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: 12px;
+    z-index: 12;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid #d9c79b4d;
+    border-radius: 4px;
+    color: #eee4cb;
+    background: #24281fe8;
+    box-shadow:
+      0 2px 3px #120b0633,
+      inset 0 1px #ffffff12;
+    font: 500 13px var(--sans);
+  }
+  .mobile-desk-open:active {
+    transform: translateY(1px);
+  }
+  .desk-refined[data-mobile] .machine-deck {
+    height: 38px;
+  }
+  .desk-refined[data-mobile] .mobile-machine-bar {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: 8px;
+    height: 72px;
+    padding: 9px 12px 17px;
+    background: var(--alu);
+    border-radius: 0 0 12px 12px;
+    box-shadow: inset 0 1px #ffffff25;
+  }
+  .desk-refined[data-mobile] .mobile-machine-bar:has(.ghostwriter) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
+  }
+  .mobile-machine-key {
+    min-width: 0;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 6px;
+    border: 1px solid var(--key-border);
+    border-radius: var(--key-radius);
+    color: var(--key-ink);
+    background: var(--key-face);
+    box-shadow:
+      0 3px 0 var(--key-foot),
+      inset 0 1px #ffffff45,
+      0 4px 4px #0003;
+    font: 600 12px var(--sans);
+  }
+  .mobile-machine-key:active {
+    transform: translateY(2px);
+    box-shadow:
+      0 1px 0 var(--key-foot),
+      inset 0 1px #ffffff25;
+  }
+  .mobile-machine-key:disabled {
+    opacity: 0.45;
+  }
+  .mobile-file-key {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .mobile-file-key > i {
+    width: 16px;
+    height: 3px;
+    background: var(--vermilion);
+  }
+  .mobile-done-key {
+    display: none;
+  }
+  .desk-refined[data-mobile] .ghostwriter {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: 44px;
+    margin: 0;
+    background: none;
+    box-shadow: none;
+  }
+  .desk-refined[data-mobile] .ghostwriter-pull {
+    position: static;
+    width: 100%;
+    height: 44px;
+    transform: none;
+    padding: 0 6px;
+    gap: 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    letter-spacing: 0.025em;
+  }
+  .desk-refined[data-mobile] .ghostwriter-pull-rule {
+    display: none;
+  }
+
+  /* The real controls remain in one native tray, with their selected materials. */
+  .desk-refined[data-mobile] .machine-face[popover]:not(:popover-open),
+  .mobile-desk-sheet[popover]:not(:popover-open) {
+    display: none;
+  }
+  .desk-refined[data-mobile] .machine-face:popover-open,
+  .mobile-desk-sheet:popover-open {
+    position: fixed;
+    inset: auto 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    max-width: 480px;
+    max-height: calc(
+      var(--mobile-viewport-height, 100dvh) - 32px -
+        env(safe-area-inset-top, 0px)
+    );
+    margin: 0 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--key-border, #a89d83);
+    border-radius: 12px 12px 5px 5px;
+    box-shadow:
+      0 12px 32px #120b0670,
+      inset 0 1px #fff8;
+    color: var(--ink);
+  }
+  .desk-refined[data-mobile] .machine-face:popover-open {
+    display: flex;
+    gap: 20px 16px;
+    padding: 8px 16px 24px;
+    min-height: 0;
+    background: var(--alu);
+  }
+  .mobile-desk-sheet:popover-open {
+    display: block;
+    padding: 8px 16px 20px;
+    background: #eee7d5;
+  }
+  .mobile-desk-sheet::backdrop,
+  .desk-refined[data-mobile] .machine-face::backdrop {
+    background: #17180f40;
+  }
+  .mobile-sheet-heading {
+    flex: 1 0 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 52px;
+    margin: 0;
+    border-bottom: 1px solid #544b3026;
+    color: inherit;
+    font: 500 18px var(--sans);
+  }
+  .mobile-sheet-heading > button {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    color: inherit;
+    background: transparent;
+  }
+  .desk-refined[data-mobile] .machine-face .machine-key-bank {
+    flex-basis: 100%;
+    max-width: none;
+    flex-wrap: nowrap;
+  }
+  .desk-refined[data-mobile] .machine-face .deck-format-controls {
+    display: flex;
+    gap: 24px;
+  }
+  .desk-refined[data-mobile] .machine-face .machine-paper-controls {
+    flex-basis: 100%;
+    gap: 12px;
+  }
+  .desk-refined[data-mobile] .machine-face .machine-identity {
+    flex-basis: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .desk-refined[data-mobile] .machine-face .brand-plate {
+    padding: 8px;
+  }
+  .desk-refined[data-mobile] .machine-face .machine-brand {
+    font-size: 17px;
+  }
+  .desk-refined[data-mobile] .machine-face .machine-model {
+    font-size: 8px;
+  }
+  .desk-refined[data-mobile] .machine-face .volume-group {
+    display: flex;
+  }
+  .desk-refined[data-mobile] .machine-face .tear-control {
+    display: none;
+  }
+  .desk-refined[data-mobile] .machine-face .feed-control {
+    margin-left: auto;
+  }
+  .desk-refined[data-mobile] .machine-face .screw {
+    display: none;
+  }
+  .mobile-desk-sheet .desk-controls {
+    position: static;
+  }
+  .mobile-desk-sheet .desk-control-stack {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 16px;
+    padding: 12px 0;
+  }
+  .mobile-desk-sheet .desk-control {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    width: 100%;
+    min-height: 58px;
+    border: 0;
+    border-bottom: 1px solid #544b3020;
+    border-radius: 0;
+    background: transparent;
+    color: #343a2c;
+    font: 500 13px var(--sans);
+    box-shadow: none;
+  }
+  .mobile-desk-sheet .desk-control > span {
+    position: static;
+    display: block;
+    height: auto;
+    padding: 0;
+    white-space: normal;
+    color: inherit;
+    background: none;
+    border: 0;
+    opacity: 1;
+    transform: none;
+    font: inherit;
+  }
+  .mobile-room-controls {
+    position: absolute;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    left: max(12px, env(safe-area-inset-left, 0px));
+    z-index: 14;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .mobile-room-controls .wall-toggle-switch {
+    position: relative;
+    inset: auto;
+    margin: 0;
+    width: 48px;
+    height: 44px;
+    transform: none;
+  }
+  .desk-refined[data-mobile] .wall-toggle-switch .switch-plate {
+    width: 48px;
+    height: 36px;
+    flex-direction: row;
+    padding: 0 3px;
+  }
+  .mobile-room-controls .plate-screw {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+  }
+  .mobile-room-controls .screw-top {
+    top: 2px;
+    left: 2px;
+  }
+  .mobile-room-controls .screw-bottom {
+    bottom: 2px;
+    right: 2px;
+  }
+  .mobile-room-controls .toggle-bat {
+    width: 18px;
+    height: 8px;
+    background: linear-gradient(90deg, #eae5d8, #baa88c 60%, #8c7c64);
+  }
+  .mobile-room-controls .switch-on .toggle-bat {
+    transform: translateX(-6px) rotateY(-28deg);
+    box-shadow: 4px 2px 5px #0008;
+  }
+  .mobile-room-controls .switch-off .toggle-bat {
+    transform: translateX(6px) rotateY(28deg);
+    box-shadow: -4px 2px 5px #0008;
+    background: linear-gradient(90deg, #8c7c64, #baa88c 40%, #eae5d8);
+  }
+  .mobile-room-controls .bat-tip {
+    inset: 1px auto 1px 1px;
+    width: 5px;
+    height: auto;
+    border-radius: 3px 1px 1px 3px;
+  }
+  .mobile-room-controls .activity-meter {
+    position: relative;
+    inset: auto;
+    margin: 0;
+    transform: none;
+    z-index: auto;
+    width: 76px;
+    height: 44px;
+  }
+  .mobile-room-controls .energy-toggle {
+    width: 76px;
+    min-height: 44px;
+  }
+  .mobile-room-controls .activity-battery {
+    width: 76px;
+    height: 36px;
+    padding: 6px 6px 4px;
+  }
+  .mobile-room-controls .energy-cells {
+    flex-direction: row;
+  }
+  .mobile-room-controls .energy-cells > span {
+    flex: 1;
+    height: 14px;
+  }
+  .mobile-room-controls .energy-caption {
+    padding-top: 4px;
+  }
+  .mobile-room-controls .battery-help {
+    display: none;
+  }
+  .mobile-room-controls .activity-drawer {
+    position: absolute;
+    top: 24px;
+    left: 0;
+    right: auto;
+    width: min(218px, calc(100vw - 92px));
+    height: 118px;
+  }
+  .mobile-room-controls .activity-face {
+    height: 112px;
+    margin: 0 3px 3px;
+    padding: 28px 12px 12px;
+    border-radius: 0 0 5px 5px;
+    transform: translateY(-100%);
+  }
+  .mobile-room-controls .activity-meter.is-open .activity-face {
+    transform: translateY(0);
+  }
+  .mobile-room-controls .activity-meter.is-reduced .activity-face,
+  .reduce-motion .mobile-room-controls .activity-face {
+    transform: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-room-controls .activity-face {
+      transform: none;
+    }
+  }
+
+  /* Two objects share the shelf. Neither sits over the writing or the machine. */
+  .desk-refined[data-mobile] .desk-front {
+    left: 98px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    height: 54px;
+    transform: none;
+  }
+  .desk-refined[data-mobile] .drawer-handle {
+    width: 100%;
+    min-height: 54px;
+    height: 54px;
+  }
+  .desk-refined[data-mobile] .tray-card {
+    height: 42px;
+    padding: 8px 12px 12px;
+  }
+  .desk-refined[data-mobile] .tray-title {
+    font-size: 12px;
+  }
+  .desk-refined[data-mobile] .tray-date {
+    display: none;
+  }
+  .desk-refined[data-mobile] .tray-lip {
+    height: 23px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+  }
+  .desk-refined[data-mobile] .copy-holder {
+    z-index: 30;
+  }
+  .desk-refined[data-mobile] .copy-holder-handle {
+    position: fixed;
+    inset: auto auto calc(12px + env(safe-area-inset-bottom, 0px)) 12px;
+    width: 72px;
+    height: 54px;
+    transform: none;
+    writing-mode: horizontal-tb;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .desk-refined[data-mobile] .copy-holder-label {
+    writing-mode: horizontal-tb;
+    transform: none;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  .desk-refined[data-mobile] .copy-holder-grip {
+    display: none;
+  }
+  .desk-refined[data-mobile] .copy-holder.is-open {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: #17180f40;
+    transform: none;
+  }
+  .desk-refined[data-mobile] .copy-holder.is-open .copy-holder-sheet {
+    position: absolute;
+    inset: 16px 12px;
+    width: auto;
+    height: auto;
+    max-height: none;
+    padding: 8px 18px 20px;
+    transform: none;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .desk-refined[data-mobile] .copy-holder.is-open .copy-holder-handle {
+    display: none;
+  }
+  .desk-refined[data-mobile] .copy-holder-clip {
+    display: none;
+  }
+  .desk-refined[data-mobile] .copy-holder-text {
+    position: static;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-size: 16px;
+  }
+  .desk-refined[data-mobile].holder-open .desk-objects {
+    transform: none !important;
+  }
+  .desk-refined[data-mobile] .settings-inspector {
+    inset: auto 12px 12px;
+    width: auto;
+    max-width: none;
+    height: min(70%, 640px);
+    max-height: calc(var(--mobile-viewport-height, 100dvh) - 24px);
+  }
+  .desk-refined[data-mobile] .reference-panel {
+    overscroll-behavior: contain;
+  }
+  .desk-refined[data-mobile] input,
+  .desk-refined[data-mobile] textarea,
+  .desk-refined[data-mobile] select {
+    font-size: max(16px, 1em);
+  }
+  .desk-refined[data-mobile] .ghostwriter-tray {
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    max-height: calc(var(--mobile-viewport-height, 100dvh) - 24px);
+  }
+  .desk-refined[data-mobile] .ghostwriter-proof {
+    max-height: calc(var(--mobile-viewport-height, 100dvh) - 24px);
+  }
+  .desk-refined[data-mobile] .desk-notice {
+    bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+    max-width: calc(100% - 32px);
+  }
+
+  /* Keep the print line above the actual keyboard, without changing Focus preference. */
+  .desk-refined[data-mobile][data-keyboard] {
+    padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  }
+  .desk-refined[data-mobile][data-keyboard] .pendant-lamp,
+  .desk-refined[data-mobile][data-keyboard] .mobile-desk-open,
+  .desk-refined[data-mobile][data-keyboard] .mobile-room-controls,
+  .desk-refined[data-mobile][data-keyboard] .desk-front,
+  .desk-refined[data-mobile][data-keyboard] .copy-holder:not(.is-open),
+  .desk-refined[data-mobile][data-keyboard] .mobile-file-key {
+    display: none;
+  }
+  .desk-refined[data-mobile][data-keyboard] .mobile-done-key {
+    display: flex;
+  }
+  .desk-refined[data-mobile][data-keyboard] .mobile-machine-bar {
+    height: 60px;
+    padding: 6px 10px 10px;
+  }
+  .desk-refined[data-mobile][data-keyboard] .machine-deck {
+    height: 32px;
+  }
+  .desk-refined[data-mobile][data-keyboard] .desk-notice {
+    bottom: 104px;
+  }
+  .desk-refined[data-mobile]:is(.settings-open, .drawer-is-open)
+    .mobile-desk-open {
+    visibility: hidden;
+  }
+  .desk-refined[data-mobile] :is(button, [role="button"]) {
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .desk-refined[data-mobile] :is(.ghostwriter-pull, .feed-knob, .print-head) {
+    touch-action: none;
+  }
+  .desk-refined[data-mobile]
+    :is(
+      .mobile-machine-key,
+      .mobile-desk-open,
+      .mobile-sheet-heading > button
+    ):focus-visible {
+    outline: 2px solid #a75c3c;
+    outline-offset: 3px;
+  }
+  .desk-refined[data-mobile] .paper-writing {
+    margin-top: var(--paper-lead);
+  }
+  .desk-refined[data-mobile] .machine-face .faceplate {
+    pointer-events: none;
+  }
+  .desk-refined[data-mobile] .machine-face .mobile-sheet-heading {
+    position: relative;
+    z-index: 2;
+  }
+  .desk-refined[data-mobile] .copy-holder {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform: none;
+    pointer-events: none;
+  }
+  .desk-refined[data-mobile] .copy-holder-handle {
+    pointer-events: auto;
+  }
+  .desk-refined[data-mobile] .copy-holder.is-open {
+    position: absolute;
+    pointer-events: auto;
+  }
+  .desk-refined[data-mobile] .copy-holder:not(.is-open) .copy-holder-sheet {
+    display: none;
+  }
+  .desk-refined[data-mobile] .copy-holder-handle {
+    translate: none;
+  }
+  .desk-refined[data-mobile] .copy-holder-label {
+    rotate: none;
+  }
+  .desk-refined[data-mobile] .copy-holder-sheet > .mobile-sheet-heading {
+    flex: 0 0 52px;
+  }
+  .desk-refined[data-mobile] .machine-face:popover-open,
+  .desk-refined[data-mobile] .mobile-desk-sheet:popover-open,
+  .desk-refined[data-mobile] .ghostwriter-tray {
+    bottom: calc(
+      var(--mobile-viewport-bottom, 0px) + 12px +
+        env(safe-area-inset-bottom, 0px)
+    );
+  }
+  .desk-refined[data-mobile] .settings-inspector {
+    bottom: calc(var(--mobile-viewport-bottom, 0px) + 12px);
+  }
+  .desk-refined[data-mobile] .machine-face .machine-identity {
+    flex-direction: row;
+  }
+  .desk-refined[data-mobile] .machine-paper-setting > .engraved,
+  .desk-refined[data-mobile] .mechanism-caption {
+    font-size: 11px;
+  }
+  .desk-refined[data-mobile] .mobile-machine-key[hidden] {
+    display: none;
+  }
+  .desk-refined[data-mobile] .selection-bar {
+    max-width: calc(100vw - 24px);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .desk-refined[data-mobile] .selection-bar-key {
+    min-width: 44px;
+    height: 44px;
+  }
+  /* Guided setup can still point at the real switches rather than a closed tray. */
+  .desk-refined[data-mobile][data-guided] .machine-face > .mobile-sheet-heading,
+  .desk-refined[data-mobile][data-guided] .mobile-machine-bar {
+    display: none;
+  }
+  .desk-refined[data-mobile][data-guided] .mobile-desk-sheet {
+    display: contents;
+  }
+  .desk-refined[data-mobile][data-guided]
+    .mobile-desk-sheet
+    > .mobile-sheet-heading,
+  .desk-refined[data-mobile][data-guided] .mobile-desk-sheet .desk-controls {
+    display: none;
+  }
+  .desk-refined[data-mobile][data-guided] .mobile-room-controls {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    padding: 0;
+    z-index: 40;
+  }
+  .desk-refined[data-mobile].immersive .mobile-machine-bar {
+    background: transparent;
+    box-shadow: none;
+  }
+  .desk-refined[data-mobile].immersive
+    .mobile-machine-key:not(.mobile-done-key),
+  .desk-refined[data-mobile].immersive .ghostwriter {
+    visibility: hidden;
+  }
+}
+
+@media (min-width: 600px) and (max-width: 900px) and (max-height: 500px) and (pointer: coarse) {
+  .desk-refined[data-mobile] {
+    padding-top: 12px;
+  }
+  .desk-refined[data-mobile] .pendant-lamp {
+    display: none;
+  }
+  .desk-refined[data-mobile] .mobile-desk-open {
+    top: auto;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+  .desk-refined[data-mobile] .desk-front {
+    right: 102px;
+  }
+}

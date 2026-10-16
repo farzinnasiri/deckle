@@ -48,7 +48,7 @@ export function RoomWallSwitch({
       onKeyDown={handleKeyDown}
       role="switch"
       aria-checked={on}
-      aria-label={`Room ambient lighting. Currently ${on ? "on" : "off"}. Flick wall switch ${on ? "down to turn off" : "up to turn on"}`}
+      aria-label={`Room ambient lighting. Currently ${on ? "on" : "off"}. Flick wall switch to turn ${on ? "off" : "on"}`}
       title={`Room Light (Wall Switch) · ${on ? "ON" : "OFF"} · Click to flick`}
     >
       <div className="switch-plate" aria-hidden="true">

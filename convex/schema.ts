@@ -12,6 +12,15 @@ export default defineSchema({
     settingsRevision: v.number(),
     settingsMutationId: v.union(v.string(), v.null()),
     deleting: v.optional(v.boolean()),
+    features: v.optional(v.record(v.string(), v.boolean())),
+    ghostwriter: v.optional(
+      v.object({
+        day: v.string(),
+        count: v.number(),
+        startedAt: v.number(),
+        requestId: v.optional(v.string()),
+      }),
+    ),
   }).index("by_clerkUserId", ["clerkUserId"]),
   desks: defineTable({
     userId: v.string(),

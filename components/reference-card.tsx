@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { LayoutChoices } from "./layout-choices";
 import type { DeskFocus } from "./desk-focus-guide";
 import { StorageSettings, type CloudStorage } from "./storage-settings";
@@ -423,6 +424,15 @@ export function ReferenceCard({
                 <span aria-hidden="true">→</span>
               </a>
               <AccountSummary />
+              <div className="studio-credit">
+                <span>Made by</span>
+                <Image
+                  src="/brand/ooof-labs/ooof-labs-petrol.svg"
+                  alt="ooof labs"
+                  width={573}
+                  height={173}
+                />
+              </div>
             </nav>
           )}
           {customizing && (

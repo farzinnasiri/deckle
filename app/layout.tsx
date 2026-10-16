@@ -4,10 +4,12 @@ import { BrowserErasureGuard } from "@/components/browser-erasure-guard";
 import "./globals.css";
 import "./motion.css";
 import "./paper-tools.css";
+import "./ghostwriter.css";
+import "./mobile-workspace.css";
 export const metadata: Metadata = {
   title: "Deckle — a place for your words",
   description:
-    "A quiet writing machine. One strip of paper. Nothing writes for you.",
+    "A quiet writing machine. One strip of paper. Your words, at your own pace.",
   applicationName: "Deckle",
   appleWebApp: {
     capable: true,
@@ -15,7 +17,11 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
   },
 };
-export const viewport: Viewport = { themeColor: "#353a34" };
+export const viewport: Viewport = {
+  themeColor: "#353a34",
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
+};
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {

@@ -82,7 +82,7 @@ export type KeyEvent = {
   mode: Mode;
   /** Edits that were not keystrokes: cutting, moving your own words, pasting
    * from outside, or the machine typing a pasted fragment in for you. */
-  origin?: "cut" | "move" | "paste" | "retype";
+  origin?: "cut" | "move" | "paste" | "retype" | "ghost";
 };
 export type Mark = MarkStyle & {
   block?: Block;

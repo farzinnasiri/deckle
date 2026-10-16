@@ -7,6 +7,7 @@ import {
   useLayoutEffect,
   useRef,
 } from "react";
+import { flushSync } from "react-dom";
 import {
   Annotation,
   EditorSelection,
@@ -28,6 +29,7 @@ import {
   caretOffset,
   editingText,
   editorMarks,
+  indexAtOffset,
   markOffsets,
   type EditRange,
   type TextSelection,
@@ -38,9 +40,13 @@ import {
   type Action,
   type Document,
   type Mode,
+  type MarkStyle,
+  type Block,
 } from "@/lib/writing";
 import { fitsPaper } from "@/lib/paper-capacity";
 import { isJoiningGlyph, lineDirections } from "@/lib/direction";
+import { playGhostEdits } from "@/lib/ghost-playback";
+import { ghostHighlight, type GhostEdit } from "@/lib/ghostwriter";
 import {
   DECKLE_CLIPBOARD,
   planPaste,
@@ -58,6 +64,7 @@ export type FormatCommand =
   | "strike"
   | "code"
   | "red"
+  | "body"
   | "h1"
   | "h2"
   | "dinkus";
@@ -84,6 +91,24 @@ export type PaperMetrics = {
   rtl: boolean;
 };
 export type EditorHandle = {
+  revise: (
+    edits: GhostEdit[],
+    options: {
+      signal: AbortSignal;
+      reduced: () => boolean;
+      instant?: boolean;
+      progress: (edit: GhostEdit, completed: number) => void;
+    },
+  ) => Promise<{
+    completed: number;
+    interrupted: boolean;
+    error?: string;
+    after: Document["marks"];
+  }>;
+  reviewGhost: (review: GhostPaperReview | null) => void;
+  revealGhost: (edit: GhostEdit) => void;
+  ghostPaperBounds: () => DOMRect | null;
+  undo: () => void;
   clearHistory: () => void;
   focus: () => void;
   moveCarriage: (clientX: number) => void;
@@ -129,7 +154,13 @@ export type PasteAnchor = {
 };
 /** Why an edit happened when it wasn't a keystroke: the desk voices these
  * itself (scissors, tape, the machine retyping a fragment). */
-export type EditOrigin = "cut" | "move" | "paste" | "retype";
+export type EditOrigin = "cut" | "move" | "paste" | "retype" | "ghost";
+export type GhostPaperReview = {
+  text: string;
+  edits: GhostEdit[];
+  active: number;
+  onSelect: (index: number) => void;
+};
 export type PasteReport = {
   as: "typed" | "clipping";
   /** From outside your own writing: the paste tag offers the other form. */
@@ -158,6 +189,7 @@ type Props = {
     range: EditRange,
     selection: TextSelection,
     origin?: EditOrigin,
+    style?: MarkStyle & { block?: Block },
   ) => Document;
   onRestore: (doc: Document) => Document;
   onFormat: (command: FormatCommand) => Document;
@@ -172,6 +204,7 @@ type Props = {
   onPasted?: (paste: PasteReport) => void;
   /** Pasted text that cannot fit on this paper. */
   onOverflow?: (text: string) => void;
+  onGhostVoice?: (text: string) => void;
 };
 // Why the caret moved, which decides whether the paper moves with it:
 // - "edit": a keystroke (typing, Enter, backspace). Writing happens at the
@@ -185,6 +218,7 @@ type Props = {
 export type MeasureReason =
   "edit" | "command" | "selection" | "pointer" | "layout";
 const external = Annotation.define<boolean>();
+const ghost = Annotation.define<MarkStyle & { block?: Block }>();
 // `fresh` is the caret offset right after a struck glyph, so that one glyph
 // can land with a little more ink than the rest.
 // `landed` is the range a paste just filled: its ink is wet and its clipping
@@ -324,6 +358,40 @@ const paperField = StateField.define<DecorationSet>({
   },
   provide: (field) => EditorView.decorations.from(field),
 });
+const updateGhostReview = StateEffect.define<GhostPaperReview | null>();
+const ghostReviewField = StateField.define<{
+  review: GhostPaperReview | null;
+  decorations: DecorationSet;
+}>({
+  create: () => ({ review: null, decorations: Decoration.none }),
+  update(value, transaction) {
+    if (transaction.docChanged)
+      return { review: null, decorations: Decoration.none };
+    const effect = transaction.effects.find((e) => e.is(updateGhostReview));
+    if (!effect) return value;
+    const review = effect.value;
+    if (!review || transaction.state.doc.toString() !== review.text)
+      return { review: null, decorations: Decoration.none };
+    return {
+      review,
+      decorations: Decoration.set(
+        review.edits.map((edit, index) => {
+          const range = ghostHighlight(edit);
+          return Decoration.mark({
+            class: `ghost-suggestion ${review.active === index ? "is-current" : ""}`,
+            attributes: {
+              "data-ghost-suggestion": String(index),
+              title: edit.reason,
+            },
+          }).range(range.from, range.to);
+        }),
+        true,
+      ),
+    };
+  },
+  provide: (field) =>
+    EditorView.decorations.from(field, (value) => value.decorations),
+});
 function changesBetween(before: string, after: string) {
   let from = 0,
     endBefore = before.length,
@@ -361,15 +429,41 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
       async () => "refused",
     );
     const measureRef = useRef<(reason: MeasureReason) => void>(() => {});
+    const reviseRef = useRef<EditorHandle["revise"]>(async () => ({
+      completed: 0,
+      interrupted: true,
+      after: [],
+    }));
+    const undoRef = useRef(() => {});
+    const interruptGhost = useRef(() => {});
     useImperativeHandle(
       ref,
       () => ({
+        revise: (edits, options) => reviseRef.current(edits, options),
+        reviewGhost: (review) =>
+          viewRef.current?.dispatch({ effects: updateGhostReview.of(review) }),
+        revealGhost: (edit) => {
+          const view = viewRef.current;
+          if (!view || latest.current.disabled) return;
+          view.dispatch({
+            selection: { anchor: Math.min(edit.to, view.state.doc.length) },
+            userEvent: "select.ghost-review",
+          });
+          measureRef.current("command");
+        },
+        ghostPaperBounds: () =>
+          viewRef.current?.dom
+            .closest(".paper-window")
+            ?.getBoundingClientRect() ?? null,
+        undo: () => undoRef.current(),
         clearHistory: () => {
+          interruptGhost.current();
           undo.current = [];
           redo.current = [];
         },
         focus: () => viewRef.current?.focus(),
         moveCarriage: (clientX) => {
+          interruptGhost.current();
           const view = viewRef.current;
           if (!view || latest.current.disabled) return;
           const coords = view.coordsAtPos(view.state.selection.main.head);
@@ -386,6 +480,7 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
             });
         },
         stepCarriage: (direction) => {
+          interruptGhost.current();
           const view = viewRef.current;
           if (!view || latest.current.disabled) return;
           const focused = document.activeElement;
@@ -403,7 +498,10 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
           });
         },
         format: (command) => formatRef.current(command),
-        repaste: () => repasteRef.current(),
+        repaste: () => {
+          interruptGhost.current();
+          return repasteRef.current();
+        },
         pasteAnchor: () => anchorRef.current(),
         selectionBox: (caret = false) => {
           const view = viewRef.current;
@@ -428,11 +526,16 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
           };
         },
         clipboard: (action) => {
+          interruptGhost.current();
           viewRef.current?.focus();
           document.execCommand(action);
         },
-        paste: () => pasteRef.current(),
+        paste: () => {
+          interruptGhost.current();
+          return pasteRef.current();
+        },
         pasteHeld: () => {
+          interruptGhost.current();
           const view = viewRef.current,
             held = lastCopy();
           if (!view || !held || latest.current.disabled) return false;
@@ -446,6 +549,7 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
           return true;
         },
         insert: (text) => {
+          interruptGhost.current();
           const view = viewRef.current;
           if (view && !latest.current.disabled)
             view.dispatch(view.state.replaceSelection(text), {
@@ -459,6 +563,7 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
     useLayoutEffect(() => {
       const initial = latest.current;
       const restore = (back: boolean) => {
+        interruptGhost.current();
         if (latest.current.mode === "ink" || latest.current.disabled)
           return true;
         const source = back ? undo : redo,
@@ -482,8 +587,13 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
           ),
           extensions: [
             paperField,
+            ghostReviewField,
             EditorState.transactionFilter.of((transaction) => {
-              if (transaction.annotation(external) || !transaction.docChanged)
+              if (
+                transaction.annotation(external) ||
+                transaction.annotation(ghost) ||
+                !transaction.docChanged
+              )
                 return transaction;
               if (
                 !fitsPaper(
@@ -524,11 +634,47 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
             }),
             EditorView.scrollHandler.of(() => true),
             EditorView.domEventHandlers({
+              mousedown: (event) => {
+                if (
+                  (event.target as Element).closest?.("[data-ghost-suggestion]")
+                ) {
+                  event.preventDefault();
+                  return true;
+                }
+                return false;
+              },
+              click: (event, editor) => {
+                const mark = (event.target as Element).closest?.<HTMLElement>(
+                  "[data-ghost-suggestion]",
+                );
+                const review = editor.state.field(ghostReviewField).review;
+                if (!mark || !review) return false;
+                event.preventDefault();
+                review.onSelect(Number(mark.dataset.ghostSuggestion));
+                return true;
+              },
               focus: () => {
                 latest.current.onFocus();
                 return false;
               },
               keydown: (e) => {
+                if (
+                  !e.metaKey &&
+                  !e.ctrlKey &&
+                  !e.altKey &&
+                  (e.key.length === 1 ||
+                    [
+                      "Backspace",
+                      "Delete",
+                      "Enter",
+                      "Escape",
+                      "ArrowLeft",
+                      "ArrowRight",
+                      "ArrowUp",
+                      "ArrowDown",
+                    ].includes(e.key))
+                )
+                  interruptGhost.current();
                 // ⌘⇧V asks for outside text to be typed in rather than taped.
                 if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v")
                   typedRequest = e.shiftKey;
@@ -542,8 +688,12 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
                 return false;
               },
               copy: (e, editor) => clipboard(e, editor, false),
-              cut: (e, editor) => clipboard(e, editor, true),
+              cut: (e, editor) => {
+                interruptGhost.current();
+                return clipboard(e, editor, true);
+              },
               paste: (e, editor) => {
+                interruptGhost.current();
                 if (latest.current.disabled) {
                   e.preventDefault();
                   return true;
@@ -586,6 +736,7 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
                 return false;
               },
               drop: (e, editor) => {
+                interruptGhost.current();
                 // Moving words within the page is CodeMirror's own drag;
                 // anything dropped from outside lands like a paste. Text only.
                 if (draggingOwn) {
@@ -604,6 +755,14 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
                   at,
                 );
                 return true;
+              },
+              pointerdown: () => {
+                interruptGhost.current();
+                return false;
+              },
+              beforeinput: () => {
+                interruptGhost.current();
+                return false;
               },
             }),
           ],
@@ -628,7 +787,8 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
             }
             if (latest.current.disabled) continue;
             // A paste made of several runs is one step to undo.
-            if (!pasting) {
+            if (!pasting && !transaction.annotation(ghost)) {
+              interruptGhost.current();
               undo.current.push(currentDoc.current);
               if (undo.current.length > 200) undo.current.shift();
               redo.current = [];
@@ -656,12 +816,14 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
                 change.text,
                 { from: change.from, to: change.to },
                 { anchor: selection.anchor, head: selection.head },
-                pasting?.origin ??
+                (transaction.annotation(ghost) ? "ghost" : undefined) ??
+                  pasting?.origin ??
                   (transaction.isUserEvent("delete.cut")
                     ? "cut"
                     : transaction.isUserEvent("move.drop")
                       ? "move"
                       : undefined),
+                transaction.annotation(ghost),
               );
             }
             // Cutting, pasting and dropping act on words already in place;
@@ -672,7 +834,15 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
               transaction.isUserEvent("input.paste") ||
               transaction.isUserEvent("input.drop") ||
               transaction.isUserEvent("move");
-            sync(currentDoc.current, command ? "command" : "edit", typed);
+            sync(
+              currentDoc.current,
+              transaction.isUserEvent("input.ghost-instant")
+                ? "layout"
+                : command
+                  ? "command"
+                  : "edit",
+              typed,
+            );
             const struck =
               typed && changes.find((change) => change.text.trim());
             if (struck) {
@@ -696,7 +866,101 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
         },
       });
       viewRef.current = view;
+      undoRef.current = () => {
+        restore(true);
+      };
+      reviseRef.current = async (edits, options) => {
+        interruptGhost.current();
+        const controller = new AbortController();
+        const signal = AbortSignal.any([options.signal, controller.signal]);
+        signal.throwIfAborted();
+        const before = currentDoc.current;
+        let afterDoc = before;
+        let style: MarkStyle & { block?: Block } = {};
+        const pieceId = latest.current.pieceId;
+        const undoAt = undo.current.length;
+        const previousRedo = redo.current;
+        undo.current.push(before);
+        redo.current = [];
+        interruptGhost.current = () => controller.abort();
+        view.focus();
+        try {
+          const result = await playGhostEdits(
+            edits,
+            {
+              text: () => view.state.doc.toString(),
+              available: () =>
+                !latest.current.disabled &&
+                latest.current.pieceId === pieceId &&
+                viewRef.current === view,
+              move: (at) => {
+                view.dispatch({
+                  selection: { anchor: at },
+                  userEvent: "select.ghost",
+                });
+                measureRef.current("edit");
+              },
+              write: (from, to, text) => {
+                // Publish the editor and parent snapshot together. A delayed
+                // React snapshot must not overwrite the next ghost keystroke.
+                flushSync(() => {
+                  view.dispatch({
+                    changes: { from, to, insert: text },
+                    selection: { anchor: from + text.length },
+                    annotations: ghost.of(style),
+                    userEvent: options.instant
+                      ? "input.ghost-instant"
+                      : text
+                        ? "input.type"
+                        : "delete.backward",
+                  });
+                });
+                afterDoc = currentDoc.current;
+              },
+              checkpoint: (edit) => {
+                const checkpoint = currentDoc.current;
+                const marks = editorMarks(checkpoint);
+                const mark =
+                  marks[indexAtOffset(marks, edit.from)] ?? marks.at(-1);
+                style = {
+                  strike: mark?.strike,
+                  element: mark?.element,
+                  underline: mark?.underline,
+                  ribbon: mark?.ribbon,
+                  crossed: mark?.crossed,
+                  code: mark?.code,
+                  block: mark?.block,
+                };
+                return () => {
+                  if (
+                    latest.current.pieceId !== pieceId ||
+                    viewRef.current !== view
+                  )
+                    return;
+                  currentDoc.current = latest.current.onRestore(checkpoint);
+                  afterDoc = currentDoc.current;
+                  sync(currentDoc.current, "command");
+                };
+              },
+              voice: (text) => latest.current.onGhostVoice?.(text),
+            },
+            { ...options, signal },
+          );
+          return { ...result, after: afterDoc.marks };
+        } finally {
+          interruptGhost.current = () => {};
+          if (
+            editingText(currentDoc.current) === editingText(before) &&
+            undo.current[undoAt] === before
+          ) {
+            undo.current.splice(undoAt, 1);
+            if (!redo.current.length) redo.current = previousRedo;
+          }
+          measureRef.current(options.instant ? "layout" : "command");
+        }
+      };
       formatRef.current = (command) => {
+        interruptGhost.current();
         if (latest.current.disabled) return;
         undo.current.push(currentDoc.current);
         redo.current = [];
@@ -1008,6 +1272,7 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
       const resize = new ResizeObserver(() => measureRef.current("layout"));
       resize.observe(view.contentDOM);
       return () => {
+        interruptGhost.current();
         resize.disconnect();
         view.destroy();
         viewRef.current = null;
@@ -1018,6 +1283,7 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
       const view = viewRef.current;
       if (!view) return;
       const changedPiece = previousPiece.current !== props.pieceId;
+      if (changedPiece) interruptGhost.current();
       if (changedPiece) {
         undo.current = [];
         redo.current = [];
@@ -1042,6 +1308,9 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
         measureRef.current("layout");
       }
     }, [props.document, props.pieceId]);
+    useEffect(() => {
+      if (props.disabled) interruptGhost.current();
+    }, [props.disabled]);
     useEffect(() => {
       measureRef.current("layout");
     }, [props.feedOffset]);

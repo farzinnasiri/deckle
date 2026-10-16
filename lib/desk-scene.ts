@@ -8,6 +8,7 @@ export function inspectorPlacement({
   contentHeight,
   paddingTop,
   side = "right",
+  maxScale = 1,
 }: {
   width: number;
   height: number;
@@ -16,12 +17,13 @@ export function inspectorPlacement({
   paddingTop: number;
   /** Where the panel stands: settings on the right, the copy holder on the left. */
   side?: "left" | "right";
+  maxScale?: number;
 }) {
   const narrow = width <= 800;
   // The copy holder also leaves the control strip on the right uncovered.
   const reserved = narrow ? 24 : side === "right" ? 404 : 470;
   const scale = Math.min(
-    1,
+    maxScale,
     (width - reserved) / stageWidth,
     (narrow ? height * 0.56 - 48 : height - 152) / contentHeight,
   );

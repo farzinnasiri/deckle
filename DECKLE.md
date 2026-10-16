@@ -1,5 +1,7 @@
 # Deckle
 
+Current product decision, 16 October 2026: optional AI copyediting is now permitted for existing writing. Ghostwriter highlights scoped suggestions for review, then applies individual corrections or all remaining corrections through the machine, with undo. This supersedes the original no-AI principle below. See [Ghostwriter](docs/ghostwriter.md) for the current behavior.
+
 **A writing machine that never existed.**
 
 > *deckle edge*: the rough, feathered edge of handmade paper, left where the sheet met the frame. On this machine, every piece you finish ends with one, because you tear it off.

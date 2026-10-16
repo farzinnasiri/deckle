@@ -7,9 +7,12 @@ export class StorageError extends Error {
     super(message);
   }
 }
-export async function user(request: Request) {
+export async function user(
+  request: Request,
+  signInMessage = "Sign in to save your desk.",
+) {
   const { userId } = await auth();
-  if (!userId) throw new StorageError("Sign in to save your desk.", 401);
+  if (!userId) throw new StorageError(signInMessage, 401);
   const account = request.headers.get("X-Deckle-Account");
   if ((account && account !== userId) || (request.method !== "GET" && !account))
     throw new StorageError(

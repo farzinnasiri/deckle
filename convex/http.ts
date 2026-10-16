@@ -31,6 +31,10 @@ http.route({
         result = await ctx.runMutation(internal.desks.ticket, args);
       else if (operation === "save-desk")
         result = await ctx.runMutation(internal.desks.save, args);
+      else if (operation === "ghostwriter")
+        result = await ctx.runAction(internal.ghostwriter.polish, args);
+      else if (operation === "features")
+        result = await ctx.runQuery(internal.features.get, args);
       else
         return Response.json({ error: "Unknown operation" }, { status: 400 });
       return Response.json(

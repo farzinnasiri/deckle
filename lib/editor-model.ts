@@ -109,8 +109,10 @@ export function editDocument(doc: Document, event: KeyEvent): Document {
         seed: (event.seed + i * 7919) >>> 0,
         density: event.density,
         mode: event.mode,
-        ...doc.typingStyle,
-        ...(doc.pendingBlock ? { block: doc.pendingBlock } : {}),
+        ...(event.origin === "ghost" ? event.style : doc.typingStyle),
+        ...(event.origin !== "ghost" && doc.pendingBlock
+          ? { block: doc.pendingBlock }
+          : {}),
         ...(inheritedClip ? { clipId: inheritedClip } : {}),
       }));
     }

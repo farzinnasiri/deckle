@@ -115,6 +115,12 @@ export function SelectionBar({
         height = bar.current?.offsetHeight ?? 40;
       const view = paperWindow();
       if (box && view) {
+        const viewportTop = window.visualViewport?.offsetTop ?? 0;
+        const visibleTop = Math.max(view.top, viewportTop);
+        const visibleBottom = Math.min(
+          view.bottom,
+          viewportTop + (window.visualViewport?.height ?? innerHeight),
+        );
         // Centre on a one-line selection; on a longer one, stay by the end
         // the mouse finished on, so the keys are a short reach away.
         const centre = box.singleLine ? (box.startX + box.endX) / 2 : box.headX;
@@ -125,13 +131,19 @@ export function SelectionBar({
         // A selection can run past the window, behind the machine or above
         // the slot; the bar stays over the paper you can see.
         const clamp = (y: number) =>
-          Math.max(view.top, Math.min(view.bottom, y));
+          Math.max(visibleTop, Math.min(visibleBottom, y));
         const anchorTop = clamp(box.singleLine ? box.top : box.headTop),
           anchorBottom = clamp(box.singleLine ? box.bottom : box.headBottom);
-        const below = anchorTop - height - 12 < Math.max(8, view.top);
+        const below = anchorTop - height - 12 < Math.max(8, visibleTop);
         setPlace({
           left,
-          top: below ? anchorBottom + 10 : anchorTop - height - 10,
+          top: Math.max(
+            visibleTop + 4,
+            Math.min(
+              visibleBottom - height - 4,
+              below ? anchorBottom + 10 : anchorTop - height - 10,
+            ),
+          ),
           below,
           nub: Math.max(14, Math.min(width - 14, centre - left)),
         });

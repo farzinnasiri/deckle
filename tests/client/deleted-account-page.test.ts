@@ -17,7 +17,11 @@ vi.mock("../../components/account-desk", () => ({ AccountDesk: () => null }));
 import Page from "../../app/page";
 
 beforeEach(() => {
-  state.cloud.mockReset().mockResolvedValue(true);
+  state.cloud
+    .mockReset()
+    .mockImplementation(async (operation) =>
+      operation === "features" ? { ghostwriter: true } : true,
+    );
   state.check.mockReset();
   vi.stubEnv("CONVEX_SITE_URL", "https://example.convex.site");
   vi.stubEnv("DECKLE_BRIDGE_SECRET", "test-bridge");
@@ -36,5 +40,16 @@ test("a current account is preserved after the fresh identity check", async () =
   state.check.mockResolvedValue({ data: [{ id: "user_a" }] });
   const page = await Page();
   expect(page.props.userId).toBe("user_a");
-  expect(state.cloud).toHaveBeenCalledTimes(1);
+  expect(state.cloud).toHaveBeenCalledTimes(2);
+  expect(page.props.features).toEqual({ ghostwriter: true });
+});
+test("feature lookup failures leave writing available with unreleased features hidden", async () => {
+  state.check.mockResolvedValue({ data: [{ id: "user_a" }] });
+  state.cloud.mockImplementation(async (operation) => {
+    if (operation === "features") throw new Error("backend unavailable");
+    return true;
+  });
+  const page = await Page();
+  expect(page.props.userId).toBe("user_a");
+  expect(page.props.features).toEqual({ ghostwriter: false });
 });

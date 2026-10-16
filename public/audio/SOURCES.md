@@ -42,3 +42,12 @@ Recording: https://cdn.freesound.org/previews/344/344432_3278936-hq.mp3
 License: https://creativecommons.org/publicdomain/zero/1.0/
 
 Cut from 2.24–2.56 seconds of the recording, converted to mono at 44.1 kHz and 128 kbps MP3. High-pass at 100 Hz and low-pass at 3.2 kHz remove handling rumble and thin rustling. Raised 15 dB, with an 8 ms entrance and 70 ms exit fade. Folder navigation uses this short cardboard friction recording; opening and returning a reading sheet retain the paper recording. Playback follows the existing volume and mute controls, with at most one new navigation voice every 120 ms.
+
+## Ghostwriter metal drawer
+
+ghost-drawer-open.mp3 and ghost-drawer-close.mp3: short excerpts of "Tiroir métallique #1", Joseph SARDIN / LaSonotheque, sound 792, CC0 public domain.
+
+Source and license: https://lasonotheque.org/tiroir-metallique-1-s0792.html
+Recording: https://lasonotheque.org/UPLOAD/mp3/0792.mp3
+
+Opening uses 0.115–0.935 seconds; closing uses 2.30–3.085 seconds. Compressed to 2.4 times the recorded speed without changing pitch to match the small drawer, filtered at 100 Hz and 6 kHz, raised 2 dB, given short entrance/exit fades, and encoded as mono 44.1 kHz MP3 at 128 kbps. Playback uses the machine's existing room, volume and mute controls. These are edited recordings, not synthesized effects.

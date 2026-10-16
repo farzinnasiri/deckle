@@ -13,6 +13,7 @@ Start writing without an account. Your desk saves in this browser. Sign in when 
 - Choose a machine, paper, desk surface, clock, and lighting. New desks start with Cherry and the lights on. Saved choices stay yours.
 - An optional guided setup introduces the desk, lamps, Notes drawer, daily writing battery, and text selection.
 - Type and edit anywhere on the paper. Draft corrections erase; Ink corrections preserve the original marks.
+- Accounts enabled through [feature flags](docs/feature-flags.md) can ask Ghostwriter to check grammar or wording, or explicitly permit structure changes. Review suggestions beside the paper, then Fix one or Fix all through the machine. Local corrections retain other suggestions; unrelated wording changes clear the pass. Undo restores the last fix or group. [Ghostwriter behavior and setup](docs/ghostwriter.md).
 - Tear and file finished papers, search the archive, read a paper, or replay its writing history.
 - Export Markdown, printable papers, share images, or a complete archive including replay logs. Import an archive to move writing between browsers.
 - Local writing saves to IndexedDB. Cloud mode keeps a browser copy and queues offline changes for the next connection. Conflicting versions are preserved for you to combine.

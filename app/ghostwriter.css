@@ -1,0 +1,913 @@
+@property --ghostwriter-travel {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+/* A recessed key bank inside the case, drawn out by its bakelite end cap. */
+.ghostwriter {
+  position: relative;
+  z-index: 8;
+  width: 100%;
+  height: 38px;
+  color: #ece6d4;
+  background: var(--alu);
+  box-shadow: inset 0 1px #fff2;
+}
+.ghostwriter-pull {
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 174px;
+  height: 48px;
+  padding: 8px 12px;
+  border: 2px solid #181a16;
+  border-radius: 8px;
+  color: #d1cdbf;
+  background:
+    linear-gradient(#302e29ee, #24231fee), url("/textures/metal.png?v=2");
+  box-shadow:
+    inset 0 1px 1px #ffffff5c,
+    inset 0 -2px 3px #0009,
+    0 0 0 2px #5b594e,
+    0 3px 0 3px #1b1c16,
+    0 5px 6px #0006;
+  font: 500 11px var(--sans, Barlow, sans-serif);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  touch-action: none;
+  cursor: grab;
+}
+.ghostwriter-pull::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 5px;
+  box-shadow:
+    inset 0 2px 4px #0008,
+    inset 0 -1px #ffffff18,
+    0 1px #ffffff12;
+  pointer-events: none;
+}
+.ghostwriter-pull > span,
+.ghostwriter-pull > b,
+.ghostwriter-emblem,
+.ghostwriter-pull-rule {
+  position: relative;
+}
+.ghostwriter-pull:active {
+  cursor: grabbing;
+}
+.ghostwriter-pull b,
+.ghostwriter-readout i {
+  flex: 0 0 4px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #171c14;
+  box-shadow:
+    inset 0 1px 1px #000a,
+    0 1px #fff2;
+}
+.ghostwriter-pull b.is-running,
+.ghostwriter-readout.is-running i,
+.ghostwriter-readout.has-error i {
+  background: #f0b17d;
+}
+.ghostwriter-pull b.is-running {
+  animation: ghostwriter-signal 1.2s ease-in-out infinite;
+}
+.ghostwriter-tray {
+  display: block;
+  visibility: hidden;
+  position: fixed;
+  inset: auto auto max(12px, env(safe-area-inset-bottom)) 50%;
+  width: min(360px, calc(100% - 24px));
+  max-height: calc(100svh - 24px);
+  margin: 0;
+  padding: 0 0 7px;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--engraved-color, #35392e);
+  transform: translateX(-50%);
+  transition:
+    visibility 0s 280ms,
+    overlay 280ms allow-discrete;
+}
+.ghostwriter-tray:popover-open,
+.ghostwriter[data-side="true"].is-open .ghostwriter-tray {
+  visibility: visible;
+  transition-delay: 0s;
+}
+.ghostwriter-chassis {
+  padding: 12px 14px;
+  max-height: calc(100svh - 31px);
+  overflow: auto;
+  border: 1px solid var(--key-border, #817f72);
+  border-radius: 7px;
+  background: linear-gradient(#c7bda321, #c7bda321), var(--alu);
+  box-shadow:
+    inset 0 1px #ffffff65,
+    inset 0 -2px 2px #0003,
+    0 3px 0 #4d4c41,
+    0 6px 9px #14180f48;
+  transform: translateY(calc(100% + 12px));
+  transition: transform 280ms var(--mechanical-ease);
+}
+.ghostwriter-tray::backdrop {
+  background: transparent;
+}
+.ghostwriter:not(.is-open) .ghostwriter-tray:not(:popover-open) {
+  pointer-events: none;
+}
+.ghostwriter-unit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "switches switches" "heading actions";
+  grid-template-rows: 84px 50px;
+  align-items: center;
+  gap: 12px 10px;
+  width: 100%;
+}
+.ghostwriter-heading {
+  grid-area: heading;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 50px;
+}
+.ghostwriter-readout {
+  flex: 1;
+  align-self: start;
+  padding-top: 3px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px 6px;
+  min-width: 0;
+  font: 500 11px/1.25 var(--sans, Barlow, sans-serif);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.015em;
+  color: inherit;
+}
+.ghostwriter-state {
+  flex-basis: 100%;
+  padding-left: 10px;
+  color: inherit;
+  font-size: 10px;
+}
+.ghostwriter-close {
+  flex: 0 0 44px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: 500 10px var(--sans, Barlow, sans-serif);
+  cursor: pointer;
+  touch-action: none;
+}
+.ghostwriter-waiting {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.ghostwriter-waiting i {
+  animation: ghostwriter-signal 1.2s ease-in-out infinite;
+}
+.ghostwriter-waiting i:nth-child(2) {
+  animation-delay: 160ms;
+}
+.ghostwriter-waiting i:nth-child(3) {
+  animation-delay: 320ms;
+}
+@keyframes ghostwriter-signal {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.ghostwriter-switches {
+  grid-area: switches;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  min-width: 0;
+}
+.ghostwriter-choice {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  height: 84px;
+  padding: 5px 4px 0;
+  color: var(--engraved-color, #35392e);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.ghostwriter-choice + .ghostwriter-choice::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 7px;
+  bottom: 9px;
+  width: 1px;
+  background: #514d3d33;
+  box-shadow: 1px 0 #ffffff40;
+}
+.ghostwriter-choice-label {
+  font: 600 11px/1.2 var(--sans, Barlow, sans-serif);
+  text-transform: uppercase;
+  letter-spacing: 0.065em;
+  text-shadow: 0 1px #ffffff45;
+}
+.ghostwriter-toggle {
+  --toggle-diameter: 28px;
+  --toggle-throw: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+}
+/* A round washer, a hex retaining nut and a short nickel lever. */
+.ghostwriter-socket {
+  position: relative;
+  flex: 0 0 var(--toggle-diameter);
+  width: var(--toggle-diameter);
+  height: var(--toggle-diameter);
+  border: 1px solid #68695e;
+  border-radius: 50%;
+  background: linear-gradient(
+    145deg,
+    #edecdd,
+    #b6b7a8 42%,
+    #777c71 70%,
+    #c5c7b7
+  );
+  box-shadow:
+    0 1px 2px #181b1466,
+    inset 0 1px #ffffedc2,
+    inset 0 -1px #42483e;
+}
+.ghostwriter-socket::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  background: linear-gradient(
+    145deg,
+    #f2f0df,
+    #b5b8aa 45%,
+    #737c71 49%,
+    #c3c8b9 76%,
+    #737a6b
+  );
+  box-shadow:
+    inset 0 1px #ffffed,
+    inset 0 -1px #545b4d;
+}
+.ghostwriter-socket::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 1px solid #72796b;
+  border-radius: 50%;
+  background: #22291f;
+  box-shadow:
+    inset 0 2px 2px #0c110ccc,
+    0 1px #f0efd27a;
+}
+.ghostwriter-lever {
+  --lever-direction: -1;
+  position: absolute;
+  z-index: 1;
+  left: calc(50% - 3px);
+  top: calc(50% - var(--toggle-throw));
+  width: 6px;
+  height: calc(var(--toggle-throw) + 2px);
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    #676e61,
+    #f6f3dd 30%,
+    #c8ceba 50%,
+    #8a9581 78%,
+    #515d4b
+  );
+  box-shadow:
+    1px 2px 2px #11190e66,
+    inset 0 0 0 0.5px #4c5947;
+  transform-origin: 50% calc(100% - 2px);
+  transform: scaleY(var(--lever-direction));
+  transition: transform 120ms var(--mechanical-ease);
+}
+.ghostwriter-lever::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: 10px;
+  height: 11px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    #7e8674,
+    #f4f0d9 25%,
+    #d5d9c2 52%,
+    #9ca78f 82%,
+    #59684f
+  );
+  box-shadow:
+    1px 1px 2px #0e170f66,
+    inset 0 1px #ffffe7,
+    inset 0 -1px #67725d;
+}
+.ghostwriter-choice[aria-checked="true"] .ghostwriter-lever {
+  --lever-direction: 1;
+}
+.ghostwriter-choice:active .ghostwriter-lever {
+  filter: brightness(0.92);
+}
+.ghostwriter-switch-state {
+  display: grid;
+  gap: 12px;
+  font: 500 10px/1 var(--sans, Barlow, sans-serif);
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+.ghostwriter-switch-state > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  opacity: 0.78;
+}
+.ghostwriter-switch-state > span[data-lit="true"] {
+  opacity: 1;
+}
+.ghostwriter-switch-state i {
+  width: 5px;
+  height: 5px;
+  border: 1px solid #60654f;
+  border-radius: 50%;
+  background: #3c4535;
+  box-shadow:
+    inset 0 1px 1px #000b,
+    0 1px #ffffff65;
+}
+.ghostwriter-switch-state [data-lit="true"] i {
+  background: radial-gradient(circle at 35% 30%, #fff0b5, #e8b054 55%, #b17d37);
+  border-color: #9a713c;
+  box-shadow:
+    0 1px 2px #875c2b55,
+    inset 0 1px #fff2ba;
+}
+.ghostwriter-switches[hidden] {
+  display: none;
+}
+.ghostwriter-error {
+  grid-area: switches;
+  align-self: center;
+  max-height: 84px;
+  margin: 0;
+  overflow-y: auto;
+  scrollbar-color: #6a675a transparent;
+  font: 500 11px/1.4 var(--sans, Barlow, sans-serif);
+  overflow-wrap: anywhere;
+}
+.ghostwriter-actions {
+  grid-area: actions;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-bottom: 0;
+}
+.desk-refined .machine .ghostwriter-run {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  order: 2;
+  flex: 0 0 156px;
+  width: 156px;
+  min-width: 0;
+  max-width: none;
+  height: 50px;
+  padding: 4px;
+  border-radius: 6px;
+  color: var(--key-ink);
+  text-decoration: none;
+  box-shadow:
+    0 4px 0 var(--key-foot),
+    0 5px 4px #0008,
+    inset 0 1px 1px #ffffffa6,
+    inset 0 -2px 1px #0002,
+    0 0 0 5px #22251d,
+    0 0 0 6px #a39b84,
+    0 2px 0 7px #24271e;
+}
+.ghostwriter-run-mark {
+  width: 18px;
+  height: 3px;
+  background: var(--accent, #ae503b);
+}
+.desk-refined .machine .ghostwriter-run::after {
+  display: none;
+}
+.desk-refined .machine .ghostwriter .mech-label,
+.desk-refined .machine .ghostwriter-sign-in {
+  font: 600 11px/1 var(--sans, Barlow, sans-serif);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.ghostwriter :is(button, a):focus-visible {
+  outline: 2px solid var(--engraved-color, #35392e);
+  outline-offset: 4px;
+}
+.ghostwriter button:disabled {
+  cursor: default;
+}
+/* The end cap meets the case's right seam; its body slides out from that seam.
+   Both parts inherit one travel value, including through a reversed pull. */
+.ghostwriter[data-side="true"] {
+  --gw-exit: 4px;
+  position: absolute;
+  right: -40px;
+  bottom: 12px;
+  width: 44px;
+  height: 188px;
+  background: none;
+  box-shadow: none;
+  transition: --ghostwriter-travel 280ms var(--mechanical-ease);
+}
+.ghostwriter[data-side="true"]::before,
+.ghostwriter[data-side="true"]::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  left: -2px;
+  width: 5px;
+  height: 13px;
+  border-radius: 45%;
+  background: linear-gradient(
+    90deg,
+    #77786b,
+    #ecebdd 42%,
+    #b9baaa 68%,
+    #595b51
+  );
+  box-shadow:
+    1px 1px 2px #0006,
+    inset 0 1px #fff9;
+  pointer-events: none;
+}
+.ghostwriter[data-side="true"]::before {
+  top: 7px;
+}
+.ghostwriter[data-side="true"]::after {
+  bottom: 7px;
+}
+.ghostwriter[data-side="true"] .ghostwriter-pull {
+  left: 0;
+  top: 7px;
+  bottom: auto;
+  width: 44px;
+  height: 174px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 7px;
+  border: 1px solid #181a16;
+  border-radius: 2px 12px 12px 2px;
+  background:
+    linear-gradient(
+      90deg,
+      #151713 0 3px,
+      #383930 5px,
+      #282923 9px,
+      #24251f 85%,
+      #171913
+    ),
+    url("/textures/metal.png?v=2");
+  box-shadow:
+    inset 0 1px 1px #ffffff3d,
+    inset -2px -2px 3px #0008,
+    2px 3px 4px #0005;
+  transform: translateX(var(--ghostwriter-travel));
+}
+.ghostwriter[data-side="true"] .ghostwriter-pull::before {
+  inset: 5px 4px 5px 6px;
+  border-radius: 2px 8px 8px 2px;
+  box-shadow:
+    inset 1px 2px 3px #000a,
+    inset -1px -1px #ffffff12,
+    0 1px #ffffff18;
+}
+.ghostwriter[data-side="true"] .ghostwriter-pull span {
+  writing-mode: vertical-rl;
+}
+.ghostwriter[data-side="true"].is-open {
+  --ghostwriter-travel: calc(var(--gw-exit) + var(--gw-body));
+}
+.ghostwriter-tray[data-side="true"] {
+  position: absolute;
+  left: var(--gw-exit);
+  top: 7px;
+  bottom: auto;
+  width: var(--gw-body);
+  height: 181px;
+  max-height: none;
+  transform: none;
+}
+.ghostwriter-tray[data-side="true"] .ghostwriter-chassis {
+  height: 174px;
+  max-height: none;
+  overflow: hidden;
+  padding: 16px 12px 20px;
+  border-radius: 0 4px 4px 0;
+  transform: translateX(
+    calc(var(--ghostwriter-travel) - var(--gw-exit) - var(--gw-body))
+  );
+  transition: none;
+}
+.ghostwriter-tray[data-side="true"] .ghostwriter-close {
+  display: none;
+}
+.ghostwriter-tray[data-side="true"] .ghostwriter-unit {
+  grid-template-rows: 76px 44px;
+}
+.ghostwriter-tray[data-side="true"] .ghostwriter-choice {
+  height: 76px;
+  padding-inline: 2px;
+}
+.ghostwriter-tray[data-side="true"] .ghostwriter-choice-label {
+  font-size: 9px;
+  letter-spacing: 0.045em;
+}
+.ghostwriter-tray[data-side="true"] .ghostwriter-toggle {
+  --toggle-diameter: 26px;
+  --toggle-throw: 18px;
+  height: 44px;
+  gap: 6px;
+}
+.ghostwriter-tray[data-side="true"] .ghostwriter-switch-state {
+  font-size: 9px;
+}
+.ghostwriter-tray[data-side="true"] .ghostwriter-switch-state > span {
+  gap: 4px;
+}
+.ghostwriter-tray[data-side="true"] .ghostwriter-readout {
+  font-size: 10px;
+}
+.ghostwriter-tray[data-side="true"] .ghostwriter-vents {
+  width: 38px;
+  height: 18px;
+}
+.ghostwriter-tray[data-side="true"] .ghostwriter-actions {
+  gap: 8px;
+}
+.desk-refined .machine .ghostwriter-tray[data-side="true"] .ghostwriter-run {
+  flex-basis: 100px;
+  width: 100px;
+  height: 44px;
+}
+.desk-refined
+  .machine
+  .ghostwriter-tray[data-side="true"]
+  .ghostwriter-run
+  .mech-label {
+  font-size: 14px;
+}
+.ghostwriter-tray:not([data-side="true"]):popover-open .ghostwriter-chassis {
+  transform: translate(0);
+}
+.ghostwriter.is-keyboard,
+.desk-refined.reduce-motion .ghostwriter,
+.ghostwriter.is-keyboard
+  :is(.ghostwriter-pull, .ghostwriter-tray, .ghostwriter-chassis),
+.desk-refined.reduce-motion
+  .ghostwriter
+  :is(
+    .ghostwriter-pull,
+    .ghostwriter-tray,
+    .ghostwriter-chassis,
+    .deck-mech-btn
+  ) {
+  transition: none;
+}
+.desk-refined.reduce-motion
+  .ghostwriter
+  :is(.ghostwriter-waiting i, .ghostwriter-pull b) {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ghostwriter,
+  .ghostwriter
+    :is(
+      .ghostwriter-pull,
+      .ghostwriter-tray,
+      .ghostwriter-chassis,
+      .deck-mech-btn
+    ) {
+    transition: none !important;
+  }
+  .ghostwriter :is(.ghostwriter-waiting i, .ghostwriter-pull b) {
+    animation: none !important;
+  }
+}
+
+.ghostwriter-emblem {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 18px;
+  fill: #c8c4b7;
+  filter: drop-shadow(0 1px 1px #0008);
+}
+.ghostwriter-emblem ellipse {
+  fill: #1c1e17;
+}
+.ghostwriter-pull-rule {
+  display: block;
+  flex: 0 0 1px;
+  width: 1px;
+  height: 16px;
+  background: #a9a69566;
+  box-shadow: 1px 0 #0006;
+}
+.ghostwriter[data-side="true"] .ghostwriter-emblem {
+  width: 17px;
+  height: 20px;
+}
+.ghostwriter[data-side="true"] .ghostwriter-pull-rule {
+  width: 20px;
+  height: 1px;
+  box-shadow: 0 1px #0006;
+}
+.ghostwriter-pull b {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  background: #aa7433;
+  box-shadow:
+    inset 0 1px 1px #0005,
+    0 1px #fff2;
+}
+.ghostwriter[data-phase="review"] .ghostwriter-pull b,
+.ghostwriter[data-phase="done"] .ghostwriter-pull b {
+  background: #9cb17a;
+  box-shadow: 0 0 4px #9cb17a66;
+}
+.ghostwriter[data-phase="error"] .ghostwriter-pull b {
+  background: #d87850;
+}
+.ghostwriter-vents {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 58px;
+  height: 23px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    0deg,
+    #292c21 0 3px,
+    #8f8b7966 3px 4px,
+    transparent 4px 7px
+  );
+  pointer-events: none;
+}
+.desk-refined .machine .ghostwriter-run .mech-label {
+  font: 700 18px/1 var(--mono, monospace);
+  letter-spacing: 0.07em;
+}
+.desk-refined .machine .ghostwriter-run.is-latched {
+  transform: translateY(3px);
+  background: var(--key-pressed);
+  box-shadow:
+    0 1px 0 var(--key-foot),
+    inset 0 2px 4px #0005,
+    0 0 0 5px #22251d,
+    0 0 0 6px #a39b84,
+    0 1px 0 7px #24271e;
+}
+.ghostwriter-keylight {
+  position: absolute;
+  inset: 3px;
+  border: 1px solid #dca45f;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 3px #f3bf76,
+    0 0 3px #f3bf76;
+  opacity: 0;
+  pointer-events: none;
+}
+.ghostwriter-busy .ghostwriter-keylight {
+  opacity: 1;
+  animation: ghostwriter-signal 1.2s ease-in-out infinite;
+}
+.ghostwriter[data-phase="review"] .ghostwriter-keylight,
+.ghostwriter[data-phase="done"] .ghostwriter-keylight {
+  opacity: 0.85;
+  border-color: #719253;
+  box-shadow:
+    inset 0 0 3px #829f68,
+    0 0 3px #829f68;
+}
+.ghostwriter[data-phase="error"] .ghostwriter-keylight {
+  opacity: 0.85;
+  border-color: #b65d3b;
+  box-shadow:
+    inset 0 0 3px #c17759,
+    0 0 3px #c17759;
+}
+.desk-refined.reduce-motion .ghostwriter-lever {
+  transition: none;
+}
+.desk-refined.reduce-motion .ghostwriter-keylight {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ghostwriter-lever {
+    transition: none !important;
+  }
+  .ghostwriter-keylight {
+    animation: none !important;
+  }
+}
+@media (max-width: 360px) {
+  .ghostwriter-tray:not([data-side="true"]) .ghostwriter-unit {
+    grid-template-areas: "heading heading" "switches switches" "actions actions";
+    grid-template-rows: 44px 84px 50px;
+    gap: 12px 10px;
+  }
+  .ghostwriter-tray:not([data-side="true"]) .ghostwriter-vents {
+    display: none;
+  }
+  .ghostwriter-tray:not([data-side="true"]) .ghostwriter-readout {
+    align-self: center;
+  }
+}
+
+/* Proofreader's marks stay out of the saved ink and its line measurements. */
+.ghost-suggestion {
+  background: #c4953a2b;
+  box-shadow: inset 0 -1px #9c613b;
+  cursor: pointer;
+}
+.ghost-suggestion.is-current {
+  outline: 1px solid #8f653d66;
+  outline-offset: 1px;
+}
+.ghostwriter-proof {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: 260px;
+  max-height: calc(100svh - 24px);
+  overflow: visible;
+  padding: 8px 10px 12px;
+  border: 1px solid var(--key-border, #817f72);
+  border-radius: 5px;
+  color: var(--engraved-color, #35392e);
+  background: linear-gradient(#c7bda321, #c7bda321), var(--alu);
+  box-shadow:
+    inset 0 1px #ffffff65,
+    inset 0 -2px 2px #0003,
+    0 3px 0 #4d4c41,
+    0 6px 9px #14180f48;
+  font: 500 12px/1.4 var(--sans, Barlow, sans-serif);
+}
+.ghostwriter-proof:popover-open {
+  display: flex;
+  flex-direction: column;
+}
+.ghostwriter-proof[data-compact="true"] {
+  padding-inline: 4px;
+}
+.ghostwriter-proof::backdrop {
+  background: transparent;
+}
+.ghostwriter-proof-heading {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-height: 44px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.ghostwriter-proof-heading > span {
+  flex: 1;
+  padding-left: 2px;
+  white-space: nowrap;
+}
+.ghostwriter-proof-heading button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.ghostwriter-proof-copy {
+  flex: 1;
+  min-height: 0;
+  padding: 12px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid #a3997c66;
+  border-radius: 2px;
+  color: #38382d;
+  background: #eee7d4;
+  box-shadow: inset 0 1px 2px #4e3a2314;
+  scrollbar-color: #9d9275 #eee7d4;
+}
+.ghostwriter-proof-words {
+  display: grid;
+  gap: 10px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font: 14px/1.5 var(--paper-font, var(--mono, monospace));
+}
+.ghostwriter-proof-words del {
+  color: #805042;
+  text-decoration-thickness: 1px;
+}
+.ghostwriter-proof-words ins {
+  color: #394b2e;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.ghostwriter-proof-reason {
+  margin: 12px 0 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.ghostwriter-proof-apply {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 12px;
+  padding: 14px 3px 0;
+}
+.desk-refined .machine .ghostwriter-proof-apply .deck-mech-btn {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+  height: 44px;
+  padding: 0 8px;
+  border: 1px solid var(--key-border, #817f72);
+  border-radius: var(--key-radius, 4px);
+  background: var(--key-face, #ddd7c5);
+  color: var(--key-ink, #30342c);
+  box-shadow:
+    0 3px 0 var(--key-foot, #969180),
+    inset 0 1px #ffffff75,
+    0 4px 4px #0003;
+  font: 600 11px var(--sans, Barlow, sans-serif);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.desk-refined .machine .ghostwriter-proof-apply .deck-mech-btn::after {
+  display: none;
+}
+.desk-refined .machine .ghostwriter-proof-apply .deck-mech-btn:active {
+  transform: translateY(2px);
+  box-shadow:
+    0 1px 0 var(--key-foot, #969180),
+    inset 0 1px #ffffff45;
+}
+.ghostwriter-proof button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.ghostwriter-proof button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.desk-refined[data-ghost-review-docked] .desk-front,
+.desk-refined[data-ghost-review-docked] .copy-holder-handle {
+  visibility: hidden;
+}

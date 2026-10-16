@@ -7,6 +7,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { machineAudio } from "@/lib/audio";
+import { X } from "lucide-react";
 import { stocks } from "@/lib/materials";
 import type { PaperOptions } from "@/lib/writing";
 import {
@@ -21,6 +22,7 @@ import {
 // anything on it. Copied onto the paper, its words arrive as clippings.
 
 type Props = {
+  mobile?: boolean;
   open: boolean;
   /** Hidden while a sheet or dialog covers the desk. */
   hidden: boolean;
@@ -41,6 +43,7 @@ const sourcePayload = (text: string): ClipboardPayload => ({
 });
 
 export function CopyHolder({
+  mobile = false,
   open,
   hidden,
   notes,
@@ -79,13 +82,13 @@ export function CopyHolder({
     if (pending.current === null) setText(notes);
   }, [notes]);
   useEffect(() => {
-    if (!open || hidden) return;
+    if (!open || hidden || mobile) return;
     const timer = setTimeout(
       () => area.current?.focus({ preventScroll: true }),
       420,
     );
     return () => clearTimeout(timer);
-  }, [open, hidden]);
+  }, [open, hidden, mobile]);
 
   function setPull(value: number | null) {
     if (value === null) root.current?.style.removeProperty("--pull");
@@ -99,7 +102,7 @@ export function CopyHolder({
     drag.current = {
       x: e.clientX,
       start: open ? 1 : 0,
-      width: sheet?.offsetWidth ?? 320,
+      width: sheet?.offsetWidth || 320,
       last: e.clientX,
       time: performance.now(),
       velocity: 0,
@@ -174,9 +177,27 @@ export function CopyHolder({
         } as CSSProperties
       }
       onKeyDown={(e) => {
+        if (e.key === "Tab" && mobile && open) {
+          const items = [
+            area.current,
+            root.current?.querySelector<HTMLButtonElement>(
+              ".mobile-sheet-heading button",
+            ),
+          ].filter(
+            (item): item is HTMLTextAreaElement | HTMLButtonElement => !!item,
+          );
+          e.preventDefault();
+          const at = items.indexOf(
+            document.activeElement as HTMLTextAreaElement | HTMLButtonElement,
+          );
+          items[
+            (at + (e.shiftKey ? -1 : 1) + items.length) % items.length
+          ]?.focus();
+        }
         if (e.key === "Escape" && open) {
           e.stopPropagation();
           flush();
+          if (mobile) area.current?.blur();
           onOpen(false);
         }
       }}
@@ -184,8 +205,24 @@ export function CopyHolder({
       <section
         className="copy-holder-sheet"
         aria-label="Notes for this paper"
+        role={mobile && open ? "dialog" : undefined}
+        aria-modal={mobile && open ? true : undefined}
         inert={!open || undefined}
       >
+        <header className="mobile-sheet-heading mobile-only">
+          <span>Notes</span>
+          <button
+            type="button"
+            aria-label="Close notes"
+            onClick={() => {
+              flush();
+              area.current?.blur();
+              onOpen(false);
+            }}
+          >
+            <X size={20} />
+          </button>
+        </header>
         <span className="copy-holder-clip" aria-hidden="true" />
         <textarea
           ref={area}

@@ -5,7 +5,14 @@ import { createDeskStorage, LOCAL_DESK_ID } from "@/lib/storage";
 import { needsDeskAdoption, adoptDesk } from "@/lib/account-storage";
 import { initializeCloud } from "@/lib/cloud/client";
 import { DeskStorageProvider } from "./desk-storage-provider";
-export function AccountDesk({ userId }: { userId: string | null }) {
+import type { FeatureFlags } from "@/lib/features";
+export function AccountDesk({
+  userId,
+  features,
+}: {
+  userId: string | null;
+  features: FeatureFlags;
+}) {
   const storage = useMemo(
     () => createDeskStorage(userId ?? LOCAL_DESK_ID),
     [userId],
@@ -47,7 +54,7 @@ export function AccountDesk({ userId }: { userId: string | null }) {
   if (state === "ready")
     return (
       <DeskStorageProvider storage={storage}>
-        <Deckle userId={userId} />
+        <Deckle userId={userId} features={features} />
       </DeskStorageProvider>
     );
   return (

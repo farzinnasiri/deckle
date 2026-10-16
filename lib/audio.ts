@@ -23,6 +23,8 @@ const FILES = [
   "crumple",
   "folder-slide",
   "ruling-switch",
+  "ghost-drawer-open",
+  "ghost-drawer-close",
 ] as const;
 type File = (typeof FILES)[number];
 
@@ -731,6 +733,16 @@ class MachineAudio {
         fade: 0.16,
       });
     this.onDesk(0.5, 0.3, 0, 0.3);
+  }
+
+  /** The Ghostwriter's small metal drawer running onto its stop. */
+  async ghostDrawer(open: boolean) {
+    await this.unlock();
+    const buffer = this.buffers.get(
+      open ? "ghost-drawer-open" : "ghost-drawer-close",
+    );
+    if (!this.ready || !buffer) return;
+    this.voice(buffer, { gain: 0.65, pan: 0.4, fade: 0.025 });
   }
 
   /** A folder is chosen and its paper slides up out of it. */

@@ -9,6 +9,8 @@
  */
 
 import type * as desks from "../desks.js";
+import type * as features from "../features.js";
+import type * as ghostwriter from "../ghostwriter.js";
 import type * as http from "../http.js";
 import type * as users from "../users.js";
 import type * as validators from "../validators.js";
@@ -21,6 +23,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   desks: typeof desks;
+  features: typeof features;
+  ghostwriter: typeof ghostwriter;
   http: typeof http;
   users: typeof users;
   validators: typeof validators;

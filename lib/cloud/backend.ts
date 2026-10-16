@@ -3,12 +3,20 @@ import { StorageError } from "./http";
 export async function backend<T>(
   operation: string,
   args: Record<string, unknown>,
+  options: {
+    timeoutMs?: number;
+    signal?: AbortSignal;
+    unavailableMessage?: string;
+  } = {},
 ): Promise<T> {
   const url =
     process.env.CONVEX_SITE_URL ?? process.env.NEXT_PUBLIC_CONVEX_SITE_URL;
   const secret = process.env.DECKLE_BRIDGE_SECRET;
   if (!url || !secret)
-    throw new StorageError("Cloud storage is not configured yet.", 503);
+    throw new StorageError(
+      options.unavailableMessage ?? "Cloud storage is not configured yet.",
+      503,
+    );
   const response = await fetch(new URL("/desk", url), {
     method: "POST",
     headers: {
@@ -17,7 +25,10 @@ export async function backend<T>(
     },
     body: JSON.stringify({ operation, args }),
     cache: "no-store",
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.any([
+      AbortSignal.timeout(options.timeoutMs ?? 15000),
+      ...(options.signal ? [options.signal] : []),
+    ]),
   });
   const result = await response.json();
   if (!response.ok)
