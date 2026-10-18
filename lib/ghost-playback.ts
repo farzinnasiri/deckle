@@ -53,6 +53,8 @@ export async function playGhostEdits(
   };
   signal.addEventListener("abort", cancel, { once: true });
   try {
+    if (edits.some((edit) => edit.kind === "review"))
+      throw new Error("Reader feedback cannot change the paper.");
     if (options.instant) {
       // Validate every instant replacement before changing any ink.
       let text = paper.text();

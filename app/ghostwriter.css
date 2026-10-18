@@ -775,137 +775,520 @@
   outline: 1px solid #8f653d66;
   outline-offset: 1px;
 }
+/* Proof tape. Typed findings feed up out of a small bakelite head that holds
+   the counter and the Apply key. The node keeps its fixed slot; the tape is
+   bottom-aligned so the head and the tape's action line never move. */
 .ghostwriter-proof {
+  --tape: #efe7d1;
+  --tape-ink: #2d2b24;
+  --tape-muted: #5f5847;
+  --tape-red: #a8352a;
+  --tape-rule: #8c8168;
   position: fixed;
   inset: auto;
   margin: 0;
-  width: 260px;
+  width: 248px;
   max-height: calc(100svh - 24px);
+  box-sizing: border-box;
   overflow: visible;
-  padding: 8px 10px 12px;
-  border: 1px solid var(--key-border, #817f72);
-  border-radius: 5px;
-  color: var(--engraved-color, #35392e);
-  background: linear-gradient(#c7bda321, #c7bda321), var(--alu);
-  box-shadow:
-    inset 0 1px #ffffff65,
-    inset 0 -2px 2px #0003,
-    0 3px 0 #4d4c41,
-    0 6px 9px #14180f48;
-  font: 500 12px/1.4 var(--sans, Barlow, sans-serif);
+  padding: 0;
+  border: 0;
+  color: var(--tape-ink);
+  background: transparent;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1px #1b120b55) drop-shadow(0 10px 14px #140c0750);
+  font: 13px/1.5 var(--paper-font, var(--mono, monospace));
 }
 .ghostwriter-proof:popover-open {
   display: flex;
   flex-direction: column;
-}
-.ghostwriter-proof[data-compact="true"] {
-  padding-inline: 4px;
+  justify-content: flex-end;
 }
 .ghostwriter-proof::backdrop {
   background: transparent;
 }
-.ghostwriter-proof-heading {
-  flex: 0 0 auto;
+.ghostwriter-proof > * {
+  pointer-events: auto;
+}
+.ghostwriter-proof-tape {
+  --tooth: 8px;
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 0;
-  min-height: 44px;
-  margin-bottom: 6px;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0 10px -8px;
+  padding-bottom: 8px;
+  background:
+    linear-gradient(
+      90deg,
+      #6b5a3a1c,
+      transparent 9%,
+      transparent 91%,
+      #6b5a3a1c
+    ),
+    radial-gradient(120% 70% at 20% 0%, #fff9e8, transparent 70%), var(--tape);
+  /* A torn top end: small teeth along the edge, the rest solid. */
+  mask:
+    conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg)
+      top / var(--tooth) calc(var(--tooth) / 2) repeat-x,
+    linear-gradient(#000 0 0) 0 calc(var(--tooth) / 2) / 100% 100% no-repeat;
+  animation: ghost-tape-feed 260ms cubic-bezier(0.2, 0.8, 0.25, 1);
+}
+@keyframes ghost-tape-feed {
+  from {
+    transform: translateY(22px);
+  }
+}
+.ghostwriter-proof-kind {
+  display: block;
+  padding: 2px 36px 8px 0;
+  color: var(--tape-red);
   font-size: 11px;
-  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
-.ghostwriter-proof-heading > span {
-  flex: 1;
-  padding-left: 2px;
-  white-space: nowrap;
+/* Count on the tape only when the head is too narrow for its window. */
+.ghostwriter-proof-kind > span {
+  display: none;
+  margin-left: 10px;
+  color: var(--tape-muted);
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: none;
 }
-.ghostwriter-proof-heading button {
+.ghostwriter-proof-close {
+  position: absolute;
+  z-index: 1;
+  top: 6px;
+  right: 2px;
   display: grid;
   place-items: center;
-  flex: 0 0 44px;
   width: 44px;
-  height: 44px;
+  height: 40px;
   padding: 0;
   border: 0;
-  color: inherit;
+  color: var(--tape-muted);
   background: transparent;
   cursor: pointer;
 }
+.ghostwriter-proof-close:hover {
+  color: var(--tape-ink);
+}
 .ghostwriter-proof-copy {
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
-  padding: 12px;
+  padding: 16px 16px 4px;
   overflow: auto;
   overscroll-behavior: contain;
-  border: 1px solid #a3997c66;
-  border-radius: 2px;
-  color: #38382d;
-  background: #eee7d4;
-  box-shadow: inset 0 1px 2px #4e3a2314;
-  scrollbar-color: #9d9275 #eee7d4;
-}
-.ghostwriter-proof-words {
-  display: grid;
-  gap: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: #a3987c transparent;
   overflow-wrap: anywhere;
-  white-space: pre-wrap;
-  font: 14px/1.5 var(--paper-font, var(--mono, monospace));
 }
-.ghostwriter-proof-words del {
-  color: #805042;
-  text-decoration-thickness: 1px;
+/* Fade the cut edge while more tape remains to read. */
+@supports (animation-timeline: scroll()) {
+  .ghostwriter-proof-copy {
+    animation: ghost-tape-more linear both;
+    animation-timeline: scroll(self);
+  }
+  @keyframes ghost-tape-more {
+    from,
+    96% {
+      mask: linear-gradient(#000 calc(100% - 28px), #0006);
+    }
+    to {
+      mask: none;
+    }
+  }
 }
-.ghostwriter-proof-words ins {
-  color: #394b2e;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
+.ghostwriter-proof-title {
+  margin: 0 0 6px;
+  font: 700 15px/1.3 var(--paper-font, var(--mono, monospace));
+  letter-spacing: -0.01em;
 }
 .ghostwriter-proof-reason {
-  margin: 12px 0 0;
-  overflow-wrap: anywhere;
-  font-size: 12px;
+  margin: 0;
+  color: var(--tape-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
 }
-.ghostwriter-proof-apply {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 12px;
-  padding: 14px 3px 0;
+/* Typed alternatives, each struck through to the paper preview when chosen. */
+.ghostwriter-proof-options {
+  margin-top: 12px;
+  border-top: 1px dashed var(--tape-rule);
 }
-.desk-refined .machine .ghostwriter-proof-apply .deck-mech-btn {
-  flex: 1;
+.ghostwriter-proof-option {
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 10px;
+  align-items: start;
+  min-height: 44px;
+  padding: 9px 2px;
+  border-bottom: 1px dashed var(--tape-rule);
+  cursor: pointer;
+}
+.ghostwriter-proof-option input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.ghostwriter-proof-option:has(input:disabled) {
+  opacity: 0.7;
+  cursor: default;
+}
+.ghostwriter-proof-option:has(input:focus-visible) {
+  outline: 2px solid var(--tape-ink);
+  outline-offset: -2px;
+}
+.ghostwriter-proof-option:not([data-chosen="true"]):hover
+  .ghostwriter-proof-wording {
+  color: var(--tape-ink);
+}
+.ghostwriter-proof-mark {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-top: -1px;
+  border: 1.5px solid #4c4638;
+  border-radius: 50%;
+  color: #4c4638;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+.ghostwriter-proof-option[data-chosen="true"] .ghostwriter-proof-mark {
+  border-color: var(--tape-red);
+  color: #f7efdc;
+  background: radial-gradient(circle at 40% 35%, #c04435, var(--tape-red) 70%);
+  box-shadow: 0 0 0 2px #a8352a26;
+  animation: ghost-tape-stamp 170ms ease-out;
+}
+@keyframes ghost-tape-stamp {
+  from {
+    transform: scale(1.35);
+  }
+}
+.ghostwriter-proof-wording {
+  display: grid;
+  gap: 2px;
   min-width: 0;
-  width: auto;
-  max-width: none;
-  height: 44px;
-  padding: 0 8px;
-  border: 1px solid var(--key-border, #817f72);
-  border-radius: var(--key-radius, 4px);
-  background: var(--key-face, #ddd7c5);
-  color: var(--key-ink, #30342c);
-  box-shadow:
-    0 3px 0 var(--key-foot, #969180),
-    inset 0 1px #ffffff75,
-    0 4px 4px #0003;
-  font: 600 11px var(--sans, Barlow, sans-serif);
-  letter-spacing: 0.04em;
+  color: #5a5444;
+  font-size: 13.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.ghostwriter-proof-option[data-chosen="true"] .ghostwriter-proof-wording {
+  color: var(--tape-ink);
+}
+.ghostwriter-proof-wording del {
+  text-decoration-color: var(--tape-red);
+}
+.ghostwriter-proof-wording small {
+  margin-top: 3px;
+  color: #776e59;
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: normal;
+}
+.ghostwriter-proof-wording small b {
+  display: inline-block;
+  margin-left: 8px;
+  color: var(--tape-red);
+  font-size: 10px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
-.desk-refined .machine .ghostwriter-proof-apply .deck-mech-btn::after {
+/* A single correction is typed as a proof: struck original, then the fix. */
+.ghostwriter-proof-words {
+  display: grid;
+  margin-top: 12px;
+  border-top: 1px dashed var(--tape-rule);
+}
+.ghostwriter-proof-words > div {
+  display: grid;
+  gap: 4px;
+  padding: 10px 2px 11px;
+  border-bottom: 1px dashed var(--tape-rule);
+}
+.ghostwriter-proof-words del,
+.ghostwriter-proof-words ins,
+.ghostwriter-proof-evidence blockquote {
+  display: block;
+  white-space: pre-wrap;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.ghostwriter-proof-words del {
+  color: #7d6d5a;
+  text-decoration-color: var(--tape-red);
+  text-decoration-thickness: 1.5px;
+}
+.ghostwriter-proof-words ins {
+  position: relative;
+  padding-left: 18px;
+  color: var(--tape-ink);
+  text-decoration: none;
+}
+.ghostwriter-proof-words ins::before {
+  content: "\2192";
+  position: absolute;
+  left: 0;
+  color: var(--tape-red);
+  font-weight: 700;
+}
+/* Reader feedback quotes its evidence inside a red margin bracket. */
+.ghostwriter-proof-evidence {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--tape-rule);
+}
+.ghostwriter-proof-evidence blockquote {
+  position: relative;
+  margin: 0;
+  padding: 1px 0 1px 14px;
+  color: var(--tape-ink);
+}
+.ghostwriter-proof-evidence blockquote::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  border: 1.5px solid var(--tape-red);
+  border-right: 0;
+}
+.ghostwriter-proof-links {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: center;
+  margin: 2px 16px 0;
+  padding-bottom: 6px;
+}
+.ghostwriter-proof-links button {
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  color: var(--tape-ink);
+  white-space: nowrap;
+  background: transparent;
+  font: 600 12.5px var(--paper-font, var(--mono, monospace));
+  text-decoration: underline;
+  text-decoration-color: #2d2b2466;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.ghostwriter-proof-links button:hover:not(:disabled) {
+  text-decoration-color: currentColor;
+}
+.ghostwriter-proof-links button + button {
+  background: linear-gradient(#8c816880, #8c816880) left center / 1px 14px
+    no-repeat;
+}
+/* The head: a small bakelite printer with a tape slot, counter and key. */
+.ghostwriter-proof-head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 11px 8px 7px;
+  border: 1px solid #16160f;
+  border-radius: 6px 6px 7px 7px;
+  color: #ede3cb;
+  background:
+    linear-gradient(#ffffff14, transparent 30%),
+    linear-gradient(#45463b, #2b2c24 55%, #222219);
+  box-shadow:
+    inset 0 1px #bfb59655,
+    inset 0 -2px 3px #0000004d;
+  font: 600 12px var(--sans, Barlow, sans-serif);
+}
+/* The tape slot the paper issues from. */
+.ghostwriter-proof-head::before {
+  content: "";
+  position: absolute;
+  inset: 3px 7px auto;
+  height: 4px;
+  border-radius: 2px;
+  background: #0c0c09;
+  box-shadow:
+    0 1px #c2b99a40,
+    inset 0 1px 2px #000;
+}
+.ghostwriter-proof-counter {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+.ghostwriter-proof-counter button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  color: #e6dcc3;
+  background: transparent;
+  cursor: pointer;
+}
+.ghostwriter-proof-counter button:hover:not(:disabled) {
+  color: #fff7e2;
+}
+.ghostwriter-proof-counter > span {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  min-width: 46px;
+  box-sizing: border-box;
+  justify-content: center;
+  padding: 5px 8px;
+  border-radius: 3px;
+  color: #b9af95;
+  background: #11120e;
+  box-shadow:
+    inset 0 1px 3px #000,
+    0 1px #c2b99a33;
+  font: 12px/1 var(--mono, monospace);
+  font-variant-numeric: tabular-nums;
+}
+.ghostwriter-proof-counter b {
+  color: #f3ead2;
+  font-weight: 700;
+}
+.ghostwriter-proof-counter i {
+  color: #77705e;
+  font-style: normal;
+}
+.ghostwriter-proof-well {
+  display: flex;
+  flex: 1 1 72px;
+  min-width: 64px;
+  max-width: 128px;
+  padding: 3px;
+  border-radius: 6px;
+  background: #11120e;
+  box-shadow:
+    inset 0 2px 4px #000,
+    0 1px #c2b99a33;
+}
+.ghostwriter-proof-well.is-note {
+  align-items: center;
+  justify-content: center;
+  height: 50px;
+  box-sizing: border-box;
+  color: #8e866f;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.ghostwriter-proof-key {
+  position: relative;
+  flex: 1;
+  height: 44px;
+  padding: 0 10px;
+  border: 1px solid #8d846b;
+  border-radius: 4px;
+  color: #2b2d25;
+  background: linear-gradient(#faf2df, #e5dbc1 60%, #d6cbb0);
+  box-shadow:
+    0 3px 0 #8b826a,
+    0 4px 3px #00000066,
+    inset 0 1px #fffaea;
+  transform: translateY(-3px);
+  font: 700 13.5px var(--sans, Barlow, sans-serif);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition:
+    transform 70ms ease-out,
+    box-shadow 70ms ease-out;
+}
+.ghostwriter-proof-key:hover:not(:disabled) {
+  background: linear-gradient(#fdf6e5, #e9e0c7 60%, #dacfb4);
+}
+.ghostwriter-proof-key:active:not(:disabled),
+.ghostwriter-proof-key.is-latched {
+  transform: translateY(0);
+  box-shadow:
+    0 0 0 #8b826a,
+    inset 0 1px 2px #6b62494d;
+}
+.ghostwriter-proof-key.is-latched {
+  padding-left: 22px;
+  color: #6f241b;
+}
+.ghostwriter-proof-key.is-latched::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  width: 7px;
+  height: 7px;
+  margin-top: -3.5px;
+  border-radius: 50%;
+  background: #d8483a;
+  box-shadow: 0 0 6px #e0503f;
+  animation: ghost-tape-lamp 900ms ease-in-out infinite alternate;
+}
+@keyframes ghost-tape-lamp {
+  to {
+    opacity: 0.45;
+  }
+}
+.ghostwriter-proof[data-compact="true"] .ghostwriter-proof-tape {
+  margin-inline: 6px;
+}
+.ghostwriter-proof[data-compact="true"] .ghostwriter-proof-copy {
+  padding-inline: 11px;
+}
+.ghostwriter-proof[data-compact="true"] .ghostwriter-proof-links {
+  margin-inline: 4px;
+}
+.ghostwriter-proof[data-compact="true"] .ghostwriter-proof-links button {
+  padding-inline: 8px;
+}
+.ghostwriter-proof[data-compact="true"] .ghostwriter-proof-counter > span {
   display: none;
 }
-.desk-refined .machine .ghostwriter-proof-apply .deck-mech-btn:active {
-  transform: translateY(2px);
-  box-shadow:
-    0 1px 0 var(--key-foot, #969180),
-    inset 0 1px #ffffff45;
+.ghostwriter-proof[data-compact="true"] .ghostwriter-proof-kind > span {
+  display: inline;
+}
+.ghostwriter-proof[data-compact="true"] .ghostwriter-proof-well {
+  max-width: none;
 }
 .ghostwriter-proof button:disabled {
-  opacity: 0.45;
+  opacity: 0.42;
   cursor: default;
+}
+.ghostwriter-proof-key:disabled {
+  opacity: 0.6;
 }
 .ghostwriter-proof button:focus-visible {
   outline: 2px solid currentColor;
-  outline-offset: 2px;
+  outline-offset: -3px;
+}
+/* The scroll fade is not motion and stays. */
+.desk-refined.reduce-motion .ghostwriter-proof :not(.ghostwriter-proof-copy),
+.desk-refined.reduce-motion .ghostwriter-proof *::before {
+  animation: none;
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ghostwriter-proof :not(.ghostwriter-proof-copy),
+  .ghostwriter-proof *::before {
+    animation: none;
+    transition: none;
+  }
 }
 .desk-refined[data-ghost-review-docked] .desk-front,
 .desk-refined[data-ghost-review-docked] .copy-holder-handle {

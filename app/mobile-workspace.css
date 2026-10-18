@@ -50,8 +50,9 @@
     font-size: 8px;
   }
   .desk-refined[data-mobile] .pendant-lamp {
-    --pendant-width: clamp(112px, calc(100vw - 208px), 240px);
-    left: 50%;
+    --pendant-width: clamp(96px, calc(100vw - 224px), 240px);
+    /* Center the shade between the room controls and the Desk key. */
+    left: calc(50% + 18px);
     /* Keep the socket visible as the shade grows. */
     top: calc(var(--pendant-width) * 0.375 - 46px);
   }
@@ -308,20 +309,20 @@
     left: max(12px, env(safe-area-inset-left, 0px));
     z-index: 14;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
   .mobile-room-controls .wall-toggle-switch {
     position: relative;
     inset: auto;
     margin: 0;
-    width: 48px;
+    width: 44px;
     height: 44px;
     transform: none;
   }
   .desk-refined[data-mobile] .wall-toggle-switch .switch-plate {
-    width: 48px;
+    width: 44px;
     height: 36px;
     flex-direction: row;
     padding: 0 3px;
@@ -330,6 +331,9 @@
     position: absolute;
     width: 4px;
     height: 4px;
+  }
+  .mobile-room-controls .switch-housing {
+    flex-shrink: 0;
   }
   .mobile-room-controls .screw-top {
     top: 2px;
@@ -365,15 +369,15 @@
     margin: 0;
     transform: none;
     z-index: auto;
-    width: 76px;
+    width: 64px;
     height: 44px;
   }
   .mobile-room-controls .energy-toggle {
-    width: 76px;
+    width: 64px;
     min-height: 44px;
   }
   .mobile-room-controls .activity-battery {
-    width: 76px;
+    width: 64px;
     height: 36px;
     padding: 6px 6px 4px;
   }

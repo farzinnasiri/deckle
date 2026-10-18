@@ -12,7 +12,7 @@ import { StorageError } from "../../lib/cloud/http";
 const body = {
   text: "He walk.",
   scope: { from: 0, to: 8 },
-  options: { grammar: true, wording: true, structure: false },
+  options: { fix: true, style: true, review: false },
   protected: [],
 };
 function request(
@@ -32,7 +32,7 @@ function request(
 }
 beforeEach(() => {
   state.userId = "user_a";
-  state.backend.mockReset().mockResolvedValue({ model: "test", edits: [] });
+  state.backend.mockReset().mockResolvedValue({ model: "test", findings: [] });
   vi.stubEnv("APP_URL", "https://deckle.test");
 });
 test("AI calls require authentication, the current account and the app origin", async () => {
@@ -92,3 +92,29 @@ test.each([422, 503])(
     expect(state.backend).toHaveBeenCalledTimes(1);
   },
 );
+
+test("development uses the active Portless origin instead of a stale APP_URL", async () => {
+  vi.stubEnv("NODE_ENV", "development");
+  vi.stubEnv("PORTLESS_URL", "https://deckle.localhost");
+  vi.stubEnv("APP_URL", "http://localhost:3000");
+  try {
+    expect(
+      (await POST(request("user_a", "https://deckle.localhost"))).status,
+    ).toBe(200);
+    expect(
+      (await POST(request("user_a", "http://localhost:3000"))).status,
+    ).toBe(403);
+    expect(
+      (await POST(request("user_a", "https://attacker.test"))).status,
+    ).toBe(403);
+    vi.stubEnv("NODE_ENV", "production");
+    expect(
+      (await POST(request("user_a", "https://deckle.localhost"))).status,
+    ).toBe(403);
+    expect(
+      (await POST(request("user_a", "http://localhost:3000"))).status,
+    ).toBe(200);
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});

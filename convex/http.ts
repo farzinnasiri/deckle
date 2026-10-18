@@ -2,6 +2,8 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { ConvexError } from "convex/values";
+import { legacyGhostPlan } from "../lib/ghostwriter-legacy";
+import { ghostRequest } from "../lib/ghostwriter";
 import { migrateStore } from "../lib/archive";
 const http = httpRouter();
 http.route({
@@ -31,9 +33,34 @@ http.route({
         result = await ctx.runMutation(internal.desks.ticket, args);
       else if (operation === "save-desk")
         result = await ctx.runMutation(internal.desks.save, args);
-      else if (operation === "ghostwriter")
-        result = await ctx.runAction(internal.ghostwriter.polish, args);
-      else if (operation === "features")
+      else if (operation === "ghostwriter") {
+        // The shared backend also serves the currently published frontend.
+        // Keep its flat response working while the editorial UI is rolled out.
+        const legacy = typeof args.options?.grammar === "boolean";
+        const input = ghostRequest({
+          ...args,
+          options: legacy
+            ? {
+                fix: args.options.grammar,
+                style: args.options.wording || args.options.structure,
+                review: false,
+              }
+            : args.options,
+        });
+        const plan = await ctx.runAction(internal.ghostwriter.polish, {
+          ...input,
+          userId: args.userId,
+        });
+        result = legacy
+          ? legacyGhostPlan(
+              input,
+              plan,
+              args.options.structure && !args.options.wording
+                ? "structure"
+                : "wording",
+            )
+          : plan;
+      } else if (operation === "features")
         result = await ctx.runQuery(internal.features.get, args);
       else
         return Response.json({ error: "Unknown operation" }, { status: 400 });

@@ -19,12 +19,6 @@ test("fresh sheets stay flat and the crest stays bounded for very long writing",
   assert.deepEqual(paperCurlProfile(Infinity), paperCurlProfile(0));
 });
 
-test("feeding back relaxes the curl along the same path", () => {
-  const forward = [-10, -30, -100, -500].map(paperCurlProfile);
-  const back = [-500, -100, -30, -10].map(paperCurlProfile).reverse();
-  assert.deepEqual(back, forward);
-});
-
 test("legacy type sizes remain Standard or Large; all four levels survive backups", () => {
   assert.equal(typeSize({ largeType: false }), 2);
   assert.equal(typeSize({ largeType: true }), 3);

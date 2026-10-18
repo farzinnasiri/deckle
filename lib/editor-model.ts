@@ -54,7 +54,14 @@ export function editDocument(doc: Document, event: KeyEvent): Document {
     !!event.selection && event.selection.anchor !== event.selection.head;
   const previous = marks[start - 1],
     next = marks[start];
-  const clip = next?.clipId || previous?.clipId;
+  // An insertion only belongs to a clipping between two of its glyphs.
+  // Replacements keep the provenance of the selected clipping text.
+  const clip =
+    from === to
+      ? previous?.clipId === next?.clipId
+        ? next?.clipId
+        : undefined
+      : next?.clipId;
   const inheritedClip =
     clip && marks.slice(start, end).every((mark) => mark.clipId === clip)
       ? clip

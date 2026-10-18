@@ -15,7 +15,8 @@ import { machineAudio } from "@/lib/audio";
 import { editingText, editorMarks, markOffsets } from "@/lib/editor-model";
 import {
   GHOST_TEXT_LIMIT,
-  ghostEdits,
+  ghostFindings,
+  ghostTouchesRange,
   type GhostEdit,
   type GhostOptions,
   type GhostPlan,
@@ -30,6 +31,8 @@ import {
   reconcileGhostReview,
   pendingGhostSuggestions,
   finishGhostReview,
+  chooseGhostAlternative,
+  dismissGhostFinding,
   type GhostReviewState,
 } from "@/lib/ghost-review";
 
@@ -53,19 +56,19 @@ export const GHOSTWRITER_MIN_REACH = MIN_DRAWER_WIDTH + PULL_WIDTH;
 export const GHOSTWRITER_DESKTOP_WIDTH = 1100;
 const choices = [
   {
-    kind: "grammar",
-    label: "Grammar",
+    kind: "fix",
+    label: "Fixes",
     hint: "Spelling, punctuation & small fixes",
   },
   {
-    kind: "wording",
-    label: "Wording",
-    hint: "Clearer phrases, still your voice",
+    kind: "style",
+    label: "Style",
+    hint: "Optional phrasing alternatives, recommended first",
   },
   {
-    kind: "structure",
-    label: "Structure",
-    hint: "Reorder the ideas already here",
+    kind: "review",
+    label: "Review",
+    hint: "Feedback on clarity, narrative and delivery",
   },
 ] as const;
 
@@ -84,9 +87,9 @@ export function Ghostwriter(props: {
   onReviewLayout: (layout: { visible: boolean; height: number }) => void;
 }) {
   const [options, setOptions] = useState<GhostOptions>({
-    grammar: true,
-    wording: true,
-    structure: false,
+    fix: true,
+    style: true,
+    review: false,
   });
   const [status, setStatus] = useState<Status>(idle);
   const [review, setReview] = useState<Review | null>(null);
@@ -288,9 +291,9 @@ export function Ghostwriter(props: {
           "You changed the paper while Ghostwriter was reading. Your writing is safe. Start a fresh pass.",
         );
       // Revalidate the response in the browser before giving it the carriage.
-      const edits = ghostEdits(input, plan);
+      const findings = ghostFindings(input, plan);
       const checked = reconcileGhostReview(
-        startGhostReview(checkedText, edits),
+        startGhostReview(checkedText, findings),
         editingText(latest.current.document),
       );
       if (!checked)
@@ -317,7 +320,7 @@ export function Ghostwriter(props: {
         ...idle,
         phase: "review",
         total: remaining,
-        message: `${remaining} ${remaining === 1 ? "suggestion" : "suggestions"}. Fix one or fix all; your paper is unchanged.`,
+        message: `${remaining} ${remaining === 1 ? "finding" : "findings"}. Your paper is unchanged. Apply a correction or consider the alternatives.`,
       });
     } catch (error) {
       if (
@@ -365,8 +368,10 @@ export function Ghostwriter(props: {
           marks.some(
             (mark, index) =>
               mark.clipId &&
-              edit.from < offsets[index + 1] &&
-              edit.to > offsets[index],
+              ghostTouchesRange(edit, {
+                from: offsets[index],
+                to: offsets[index + 1],
+              }),
           ),
         )
       )
@@ -446,7 +451,7 @@ export function Ghostwriter(props: {
       : status.phase === "reading"
         ? `Reading ${runningScope.current.toLowerCase()}…`
         : status.phase === "review"
-          ? `${pending.length} ${pending.length === 1 ? "suggestion" : "suggestions"}`
+          ? `${pending.length} ${pending.length === 1 ? "finding" : "findings"}`
           : status.phase === "working"
             ? `Change ${status.completed + 1}/${status.total}`
             : status.phase === "error"
@@ -624,7 +629,7 @@ export function Ghostwriter(props: {
             <div
               className="ghostwriter-switches"
               role="group"
-              aria-label="What Ghostwriter may change"
+              aria-label="What Ghostwriter should examine"
               hidden={status.phase === "error"}
             >
               {choices.map(({ kind, label, hint }) => (
@@ -709,14 +714,34 @@ export function Ghostwriter(props: {
           onReveal={() => latest.current.onOpenChange(sideRef.current)}
           onLayout={props.onReviewLayout}
           onApply={(edits) => void apply(edits)}
+          onChoose={(id, choice) =>
+            setReview((current) =>
+              current
+                ? { ...current, ...chooseGhostAlternative(current, id, choice) }
+                : null,
+            )
+          }
+          onDismiss={(id) => {
+            if (!review) return;
+            const next = { ...review, ...dismissGhostFinding(review, id) };
+            const count = pendingGhostSuggestions(next).length;
+            setReview(next);
+            setStatus((previous) => ({
+              ...previous,
+              phase: count ? "review" : "done",
+              total: count,
+              message: count ? `${count} findings remain.` : "Review complete.",
+            }));
+          }}
         />
       ) : null}
       <span id="ghostwriter-help" className="sr-only">
         AI editing sends only this paper as context. Only the selected passage
         is reviewed when text is selected. Review suggestions beside the paper.
-        Fix one or fix all remaining suggestions. Check always starts a fresh
-        pass on the current words. Type or press Escape to stop mechanical
-        editing. Undo restores the whole pass.
+        Apply a correction or chosen wording alternative. Review feedback never
+        changes the paper. Check always starts a fresh pass on the current
+        words. Type or press Escape to stop mechanical editing. Undo restores
+        the whole pass.
       </span>
       <span
         role="status"

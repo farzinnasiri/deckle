@@ -12,7 +12,7 @@ const input = {
   userId: "writer",
   text: "He walk.",
   scope: { from: 0, to: 8 },
-  options: { grammar: true, wording: true, structure: false },
+  options: { fix: true, style: true, review: false },
   protected: [],
 };
 async function setup(enabled = true) {
@@ -31,22 +31,22 @@ async function setup(enabled = true) {
     });
   return t;
 }
+function finding(before = "He walk.", after = "He walks.") {
+  return {
+    kind: "fix",
+    title: "Verb agreement",
+    reason: "Fix agreement.",
+    anchors: [before],
+    alternatives: [{ label: "Correction", edits: [{ before, after }] }],
+  };
+}
 function proposal(before = "He walk.") {
   return Response.json({
     choices: [
       {
         finish_reason: "stop",
         message: {
-          content: JSON.stringify({
-            edits: [
-              {
-                before,
-                after: "He walks.",
-                kind: "grammar",
-                reason: "Fix agreement.",
-              },
-            ],
-          }),
+          content: JSON.stringify({ findings: [finding(before)] }),
         },
       },
     ],
@@ -135,54 +135,42 @@ test("a successful action requests a capped low-effort model and returns anchore
   const fetch = vi.fn().mockImplementation(async () => proposal());
   vi.stubGlobal("fetch", fetch);
   const result = await t.action(internal.ghostwriter.polish, input);
-  expect(result.edits[0]).toMatchObject({ from: 0, to: 8, after: "He walks." });
+  expect(result.findings[0].alternatives[0].edits[0]).toMatchObject({
+    from: 0,
+    to: 8,
+    after: "He walks.",
+  });
   const body = JSON.parse(fetch.mock.calls[0][1].body);
   expect(body.model).toBe("z-ai/glm-5.3-flash");
   expect(body.reasoning.effort).toBe("low");
+  const branches =
+    body.response_format.json_schema.schema.properties.findings.items.anyOf;
+  expect(
+    branches.map(
+      (branch: {
+        properties: {
+          kind: { enum: string[] };
+          alternatives: { minItems: number; maxItems: number };
+        };
+      }) => ({
+        kind: branch.properties.kind.enum[0],
+        min: branch.properties.alternatives.minItems,
+        max: branch.properties.alternatives.maxItems,
+      }),
+    ),
+  ).toEqual([
+    { kind: "fix", min: 1, max: 1 },
+    { kind: "style", min: 1, max: 3 },
+    { kind: "review", min: 0, max: 0 },
+  ]);
+  expect(
+    body.response_format.json_schema.schema.properties.findings,
+  ).not.toHaveProperty("maxItems");
+  expect(body.max_tokens).toBeGreaterThanOrEqual(16000);
   expect(body.provider.zdr).toBe(true);
   expect(body.provider.max_price.completion).toBe(1);
   expect(fetch).toHaveBeenCalledTimes(1);
   expect(await usage(t)).toMatchObject({ count: 1 });
-  expect((await usage(t))?.requestId).toBeUndefined();
-});
-test("one check returns all corrections across the paper without a schema count cap", async () => {
-  const t = await setup();
-  const lines = Array.from(
-    { length: 80 },
-    (_, index) => `At stop ${index + 1}, she wait.`,
-  );
-  const text = lines.join("\n");
-  const edits = lines.map((before) => ({
-    before,
-    after: before.replace("wait.", "waits."),
-    kind: "grammar",
-    reason: "Use a singular verb.",
-  }));
-  const fetch = vi.fn().mockResolvedValue(
-    Response.json({
-      choices: [
-        {
-          finish_reason: "stop",
-          message: { content: JSON.stringify({ edits }) },
-        },
-      ],
-    }),
-  );
-  vi.stubGlobal("fetch", fetch);
-  const result = await t.action(internal.ghostwriter.polish, {
-    ...input,
-    text,
-    scope: { from: 0, to: text.length },
-  });
-  expect(result.edits).toHaveLength(80);
-  expect(result.edits.at(-1)?.after).toBe("At stop 80, she waits.");
-  const body = JSON.parse(fetch.mock.calls[0][1].body);
-  expect(
-    body.response_format.json_schema.schema.properties.edits,
-  ).not.toHaveProperty("maxItems");
-  expect(body.max_tokens).toBeGreaterThanOrEqual(16000);
-  expect(fetch).toHaveBeenCalledTimes(1);
-  expect((await usage(t))?.count).toBe(1);
   expect((await usage(t))?.requestId).toBeUndefined();
 });
 test("provider failures retry after 1s then 2s and count as one pass", async () => {
@@ -204,7 +192,9 @@ test("provider failures retry after 1s then 2s and count as one pass", async () 
   expect((await usage(t))?.requestId).toBeTruthy();
   expect(settled).toBe(false);
   await vi.runAllTimersAsync();
-  expect((await request).edits[0]).toMatchObject({ after: "He walks." });
+  expect((await request).findings[0].alternatives[0].edits[0]).toMatchObject({
+    after: "He walks.",
+  });
   expect(times).toHaveLength(3);
   expect(times[1] - times[0]).toBe(1000);
   expect(times[2] - times[1]).toBe(2000);
@@ -243,7 +233,9 @@ test.each([
   const request = t.action(internal.ghostwriter.polish, input);
   await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
   await vi.runAllTimersAsync();
-  expect((await request).edits[0]).toMatchObject({ after: "He walks." });
+  expect((await request).findings[0].alternatives[0].edits[0]).toMatchObject({
+    after: "He walks.",
+  });
   expect(fetch).toHaveBeenCalledTimes(2);
   expect((await usage(t))?.count).toBe(1);
   expect((await usage(t))?.requestId).toBeUndefined();
@@ -390,4 +382,37 @@ test("daily allowance blocks further paid calls", async () => {
     /30 passes/,
   );
   expect(fetch).not.toHaveBeenCalled();
+});
+
+test("validation retries explain the rejected contract without repeating generated writing", async () => {
+  const t = await setup();
+  vi.useFakeTimers();
+  const invalid = finding();
+  invalid.alternatives.push({
+    label: "private generated wording",
+    edits: [{ before: "He walk.", after: "He strolls." }],
+  });
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(
+      Response.json({
+        choices: [
+          {
+            finish_reason: "stop",
+            message: { content: JSON.stringify({ findings: [invalid] }) },
+          },
+        ],
+      }),
+    )
+    .mockImplementation(async () => proposal());
+  vi.stubGlobal("fetch", fetch);
+  const request = t.action(internal.ghostwriter.polish, input);
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+  await vi.runAllTimersAsync();
+  expect((await request).findings).toHaveLength(1);
+  const retry = JSON.parse(fetch.mock.calls[1][1].body);
+  expect(retry.messages.at(-1)).toMatchObject({ role: "system" });
+  expect(retry.messages.at(-1).content).toMatch(/fix.*alternatives.*exactly 1/);
+  expect(JSON.stringify(retry)).not.toContain("private generated wording");
+  expect((await usage(t))?.count).toBe(1);
 });

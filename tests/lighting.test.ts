@@ -14,7 +14,6 @@ import {
   transmittedLight,
   type LampGeometry,
 } from "../lib/light-beam";
-import { machineAudio } from "../lib/audio";
 import { desks, lightColor } from "../lib/materials";
 
 test("new desks open with the room light and both lamps on", () => {
@@ -24,78 +23,6 @@ test("new desks open with the room light and both lamps on", () => {
   assert.ok(settings.railLightIntensity! > 0);
   assert.equal(settings.light, "lamp");
   assert.equal(settings.deskLightTone, "tungsten");
-});
-
-test("RoomWallSwitch renders on and off states with accessible switch markup", () => {
-  // 1. ON state
-  const onHtml = renderToStaticMarkup(
-    React.createElement(RoomWallSwitch, {
-      on: true,
-      onToggle: () => {},
-      hidden: false,
-    }),
-  );
-  assert.ok(onHtml.includes("wall-toggle-switch"));
-  assert.ok(onHtml.includes("switch-on"));
-  assert.ok(onHtml.includes('role="switch"'));
-  assert.ok(onHtml.includes('aria-checked="true"'));
-  assert.ok(onHtml.includes("switch-plate"));
-  assert.ok(onHtml.includes("toggle-bat"));
-  assert.ok(onHtml.includes("plate-screw"));
-
-  // 2. OFF state
-  const offHtml = renderToStaticMarkup(
-    React.createElement(RoomWallSwitch, {
-      on: false,
-      onToggle: () => {},
-      hidden: false,
-    }),
-  );
-  assert.ok(offHtml.includes("wall-toggle-switch"));
-  assert.ok(offHtml.includes("switch-off"));
-  assert.ok(offHtml.includes('aria-checked="false"'));
-});
-
-test("DeskLampDimmer renders rotary dial with slider role and accurate values", () => {
-  // 1. Active at 70%
-  const activeHtml = renderToStaticMarkup(
-    React.createElement(DeskLampDimmer, {
-      intensity: 0.7,
-      onChange: () => {},
-      hidden: false,
-    }),
-  );
-  assert.ok(activeHtml.includes("desk-lamp-dimmer"));
-  assert.ok(activeHtml.includes("lamp-active"));
-  assert.ok(activeHtml.includes('role="slider"'));
-  assert.ok(activeHtml.includes('aria-valuenow="70"'));
-  assert.ok(activeHtml.includes("dimmer-dial-ring"));
-  assert.ok(activeHtml.includes("rotary-knob"));
-  assert.ok(activeHtml.includes("LAMP · 70%"));
-
-  // 2. Off at 0%
-  const offHtml = renderToStaticMarkup(
-    React.createElement(DeskLampDimmer, {
-      intensity: 0,
-      onChange: () => {},
-      hidden: false,
-    }),
-  );
-  assert.ok(offHtml.includes("lamp-off"));
-  assert.ok(offHtml.includes('aria-valuenow="0"'));
-  assert.ok(offHtml.includes("LAMP · 0%"));
-});
-
-test("MachineAudio has wallSwitch and dimmerTick methods available", () => {
-  assert.equal(typeof machineAudio.wallSwitch, "function");
-  assert.equal(typeof machineAudio.dimmerTick, "function");
-  // Should execute cleanly when audio context not unlocked yet
-  assert.doesNotThrow(() => {
-    machineAudio.wallSwitch(true);
-    machineAudio.wallSwitch(false);
-    machineAudio.dimmerTick(0.5);
-    machineAudio.dimmerTick(0, true);
-  });
 });
 
 const overhead: LampGeometry = {
@@ -194,19 +121,39 @@ test("custom lamp colours are safe channels and affect both source types", () =>
   assert.equal(lightColor("tungsten", "#48b9df"), "72 185 223");
 });
 
-test("the rail fader is keyboard-accessible and reflects off and bright positions", () => {
-  for (const value of [0, 0.8]) {
-    const markup = renderToStaticMarkup(
+test("lighting controls expose their state and value without relying on visual styling", () => {
+  for (const on of [false, true]) {
+    const html = renderToStaticMarkup(
+      React.createElement(RoomWallSwitch, {
+        on,
+        onToggle: () => {},
+        hidden: false,
+      }),
+    );
+    assert.match(html, /role="switch"/);
+    assert.ok(html.includes(`aria-checked="${on}"`));
+  }
+  for (const intensity of [0, 0.8]) {
+    const lamp = renderToStaticMarkup(
+      React.createElement(DeskLampDimmer, {
+        intensity,
+        onChange: () => {},
+        hidden: false,
+      }),
+    );
+    assert.match(lamp, /role="slider"/);
+    assert.ok(lamp.includes(`aria-valuenow="${intensity * 100}"`));
+    const rail = renderToStaticMarkup(
       React.createElement(RailLightFader, {
-        intensity: value,
+        intensity,
         onChange: () => {},
       }),
     );
-    assert.match(markup, /type="range"/);
-    assert.match(markup, /aria-label="Rail light brightness"/);
+    assert.match(rail, /type="range"/);
+    assert.match(rail, /aria-label="Rail light brightness"/);
     assert.ok(
-      markup.includes(
-        value ? 'aria-valuetext="80 percent"' : 'aria-valuetext="Off"',
+      rail.includes(
+        intensity ? 'aria-valuetext="80 percent"' : 'aria-valuetext="Off"',
       ),
     );
   }

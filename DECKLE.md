@@ -1,6 +1,6 @@
 # Deckle
 
-Current product decision, 16 October 2026: optional AI copyediting is now permitted for existing writing. Ghostwriter highlights scoped suggestions for review, then applies individual corrections or all remaining corrections through the machine, with undo. This supersedes the original no-AI principle below. See [Ghostwriter](docs/ghostwriter.md) for the current behavior.
+Current product decision, 17 October 2026: optional AI editing is permitted for existing writing. Ghostwriter distinguishes editorial Fixes, optional Style alternatives, and read-only Review feedback on delivery and narrative. The writer can apply individual corrections or all remaining recommended or chosen alternatives through the machine, with undo. This supersedes the original no-AI principle below. See [Ghostwriter](docs/ghostwriter.md) for the current behavior.
 
 **A writing machine that never existed.**
 

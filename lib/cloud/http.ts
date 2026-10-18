@@ -19,10 +19,14 @@ export async function user(
       "The signed-in account changed. Reopen your desk.",
       403,
     );
+  // Portless supplies the public origin; its upstream port is different.
+  const appUrl =
+    (process.env.NODE_ENV === "development" && process.env.PORTLESS_URL) ||
+    process.env.APP_URL ||
+    request.url;
   if (
     request.method !== "GET" &&
-    request.headers.get("origin") !==
-      new URL(process.env.APP_URL ?? request.url).origin
+    request.headers.get("origin") !== new URL(appUrl).origin
   )
     throw new StorageError("Invalid request origin.", 403);
   return userId;

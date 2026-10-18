@@ -104,6 +104,33 @@ test("pasting into an earlier range creates a distinct clipping and replays", ()
   assert.deepEqual(replay(JSON.parse(JSON.stringify(events))), doc);
 });
 
+test("inserting beside a clipping preserves its provenance, while interior edits retain it", () => {
+  const original = replay([
+    edit("type", "Hello end", 0),
+    edit("paste", "QUOTE", 6),
+  ]);
+  const text = editingText(original);
+  const from = text.indexOf("QUOTE"),
+    to = from + 5;
+  for (const offset of [from, to]) {
+    for (const origin of [undefined, "ghost"] as const) {
+      const doc = applyEvent(original, {
+        ...edit("type", "!", offset),
+        origin,
+      });
+      assert.equal(
+        readingDocument(doc).marks.find((m) => m.kind === "clipping")?.text,
+        "QUOTE",
+      );
+    }
+  }
+  const inside = applyEvent(original, edit("type", "!", from + 1));
+  assert.equal(
+    readingDocument(inside).marks.find((m) => m.kind === "clipping")?.text,
+    "Q!UOTE",
+  );
+});
+
 test("Ink backspace preserves the original and typing overprints it", () => {
   const events = [
     edit("type", "cat", 0),

@@ -4,18 +4,14 @@ import { internalAction, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireActiveUser } from "./users";
 import {
-  ghostEdits,
+  ghostFindings,
   ghostInstructions,
   ghostRequest,
   ghostResponseFormat,
 } from "../lib/ghostwriter";
 
 const range = v.object({ from: v.number(), to: v.number() });
-const kind = v.union(
-  v.literal("grammar"),
-  v.literal("wording"),
-  v.literal("structure"),
-);
+const kind = v.union(v.literal("fix"), v.literal("style"), v.literal("review"));
 const inferenceTimeoutMs = 90000;
 // Three attempts plus 1s and 2s backoff fit inside the 285s bridge deadline.
 const reservationTimeoutMs = 300000;
@@ -87,22 +83,37 @@ export const polish = internalAction({
     text: v.string(),
     scope: range,
     options: v.object({
-      grammar: v.boolean(),
-      wording: v.boolean(),
-      structure: v.boolean(),
+      fix: v.boolean(),
+      style: v.boolean(),
+      review: v.boolean(),
     }),
     protected: v.array(range),
   },
   returns: v.object({
     model: v.string(),
-    edits: v.array(
+    findings: v.array(
       v.object({
-        from: v.number(),
-        to: v.number(),
-        before: v.string(),
-        after: v.string(),
-        reason: v.string(),
         kind,
+        title: v.string(),
+        reason: v.string(),
+        anchors: v.array(
+          v.object({ from: v.number(), to: v.number(), quote: v.string() }),
+        ),
+        alternatives: v.array(
+          v.object({
+            label: v.string(),
+            edits: v.array(
+              v.object({
+                from: v.number(),
+                to: v.number(),
+                before: v.string(),
+                after: v.string(),
+                reason: v.string(),
+                kind,
+              }),
+            ),
+          }),
+        ),
       }),
     ),
   }),
@@ -123,7 +134,7 @@ export const polish = internalAction({
     });
     try {
       const model = "z-ai/glm-5.3-flash";
-      const body = JSON.stringify({
+      const payload = {
         model,
         max_tokens: 16000,
         temperature: 0.3,
@@ -147,11 +158,14 @@ export const polish = internalAction({
             }),
           },
         ],
-      });
+      };
+      let retryFeedback = "";
       // Reserve once for the whole check. An unusable response is retried just
       // like a failed request, and nothing reaches the editor until validated.
       for (let attempt = 1; ; attempt++) {
         let invalidOutput = false;
+        let stage = "gateway",
+          diagnostic = "request_failed";
         try {
           const token = await getServiceToken("ai-gateway");
           const response = await fetch(
@@ -163,23 +177,56 @@ export const polish = internalAction({
                 "Content-Type": "application/json",
               },
               signal: AbortSignal.timeout(inferenceTimeoutMs),
-              body,
+              body: JSON.stringify({
+                ...payload,
+                messages: retryFeedback
+                  ? [
+                      ...payload.messages,
+                      { role: "system", content: retryFeedback },
+                    ]
+                  : payload.messages,
+              }),
             },
           );
-          if (!response.ok) throw unavailable();
+          if (!response.ok) {
+            diagnostic = `http_${response.status}`;
+            throw unavailable();
+          }
+          stage = "response_json";
           const result = await response.json();
           invalidOutput = true;
+          stage = "completion";
           const choice = result?.choices?.[0];
+          diagnostic =
+            choice?.finish_reason === "length"
+              ? "truncated"
+              : "missing_completion";
           if (
             choice?.finish_reason !== "stop" ||
             typeof choice.message?.content !== "string"
           )
             throw unavailable();
-          return {
-            model,
-            edits: ghostEdits(input, JSON.parse(choice.message.content)),
-          };
+          stage = "generated_json";
+          diagnostic = "invalid_json";
+          const content = JSON.parse(choice.message.content);
+          stage = "validation";
+          return { model, findings: ghostFindings(input, content) };
         } catch (error) {
+          // Validator messages are static application strings, never paper text.
+          if (stage === "validation" && error instanceof Error)
+            retryFeedback = `The previous response failed validation: ${error.message} Return a complete corrected response from the original paper. Check every category, exact quotation and alternative before returning JSON.`;
+          else if (stage === "generated_json" || stage === "completion")
+            retryFeedback =
+              "The previous response was incomplete or invalid JSON. Return a complete JSON response matching the schema, with concise reasons and no commentary.";
+          console.warn("ghostwriter_attempt_failed", {
+            requestId,
+            attempt,
+            stage,
+            reason:
+              stage === "validation" && error instanceof Error
+                ? error.message
+                : diagnostic,
+          });
           // Never expose provider diagnostics or generated writing in errors.
           if (attempt === maxAttempts)
             throw invalidOutput || error instanceof SyntaxError

@@ -1,57 +1,135 @@
-import { minimalGhostEdit, type GhostEdit } from "./ghostwriter";
+import {
+  minimalGhostEdit,
+  type GhostEdit,
+  type GhostFinding,
+  type GhostScope,
+} from "./ghostwriter";
 
-export type GhostSuggestion = {
+export type GhostSuggestion = GhostFinding & {
   id: number;
-  edit: GhostEdit;
-  change: GhostEdit;
-  region: { from: number; to: number };
+  selected: number;
   resolved: boolean;
+  dismissed: boolean;
+  /** Smallest word regions a writer can correct without invalidating the pass. */
+  regions: GhostScope[];
 };
 type Snapshot = { text: string; suggestions: GhostSuggestion[] };
 export type GhostReviewState = Snapshot & { history: Snapshot[] };
 
+function correctionRegion(text: string, edit: GhostEdit): GhostScope {
+  const change = minimalGhostEdit(edit);
+  let from = change.from,
+    to = change.to;
+  const word = (character: string) =>
+    /[\p{L}\p{N}\p{M}_'’\u200c-]/u.test(character);
+  while (from > edit.from && word(text[from - 1])) from--;
+  while (to < edit.to && word(text[to])) to++;
+  return { from, to };
+}
 export function startGhostReview(
   text: string,
-  edits: GhostEdit[],
+  findings: GhostFinding[],
 ): GhostReviewState {
   return {
     text,
-    suggestions: edits.map((edit, id) => {
-      const change = minimalGhostEdit(edit);
-      let from = change.from,
-        to = change.to;
-      const word = (character: string) =>
-        /[\p{L}\p{N}\p{M}_'’\u200c-]/u.test(character);
-      while (from > edit.from && word(text[from - 1])) from--;
-      while (to < edit.to && word(text[to])) to++;
-      return { id, edit, change, region: { from, to }, resolved: false };
-    }),
+    suggestions: findings.map((finding, id) => ({
+      ...finding,
+      id,
+      selected: 0,
+      resolved: false,
+      dismissed: false,
+      regions: finding.alternatives.flatMap((a) =>
+        a.edits.map((edit) => correctionRegion(text, edit)),
+      ),
+    })),
     history: [],
   };
 }
 export const pendingGhostSuggestions = (review: GhostReviewState) =>
-  review.suggestions.filter((suggestion) => !suggestion.resolved);
-
+  review.suggestions.filter((s) => !s.resolved && !s.dismissed);
+export function chosenGhostEdits(suggestion: GhostSuggestion): GhostEdit[] {
+  if (
+    suggestion.kind === "review" ||
+    suggestion.resolved ||
+    suggestion.dismissed
+  )
+    return [];
+  return (suggestion.alternatives[suggestion.selected]?.edits ?? [])
+    .map(minimalGhostEdit)
+    .filter((edit) => edit.before !== edit.after);
+}
+export function chooseGhostAlternative(
+  review: GhostReviewState,
+  id: number,
+  choice: number,
+): GhostReviewState {
+  return {
+    ...review,
+    suggestions: review.suggestions.map((s) =>
+      s.id === id &&
+      s.kind === "style" &&
+      Number.isInteger(choice) &&
+      choice >= 0 &&
+      choice < s.alternatives.length
+        ? { ...s, selected: choice }
+        : s,
+    ),
+  };
+}
+export function dismissGhostFinding(
+  review: GhostReviewState,
+  id: number,
+): GhostReviewState {
+  return {
+    ...review,
+    suggestions: review.suggestions.map((s) =>
+      s.id === id ? { ...s, dismissed: true } : s,
+    ),
+  };
+}
+/** Paper decorations share the editor's existing edit-highlighting path.
+ * Feedback uses unchanged evidence, and never enters the application path. */
+export function reviewGhostEdits(suggestions: GhostSuggestion[]) {
+  const edits: GhostEdit[] = [],
+    findingIds: number[] = [];
+  for (const suggestion of suggestions) {
+    const passages =
+      suggestion.kind === "review"
+        ? suggestion.anchors.map((a) => ({
+            ...a,
+            before: a.quote,
+            after: a.quote,
+            kind: suggestion.kind,
+            reason: suggestion.reason,
+          }))
+        : (suggestion.alternatives[suggestion.selected]?.edits ?? []);
+    for (const edit of passages) {
+      edits.push(edit);
+      findingIds.push(suggestion.id);
+    }
+  }
+  return { edits, findingIds };
+}
 const whitespace = (character: string) => /\s/u.test(character);
 const letters = (text: string) => text.replace(/\s/gu, "");
+const remember = (review: GhostReviewState) =>
+  [
+    ...review.history,
+    { text: review.text, suggestions: review.suggestions },
+  ].slice(-40);
 
-/** Text, rather than mark-array identity, owns a pass. Only its correction
- * regions may change; whitespace can change anywhere. Keep a short in-memory
- * history so normal editor undo/redo restores the corresponding suggestions. */
+/** Unchanged snapshots, formatting and whitespace keep the review. Local fixes
+ * resolve their own occurrences; unrelated prose requires a fresh reading. */
 export function reconcileGhostReview(
   review: GhostReviewState,
   text: string,
 ): GhostReviewState | null {
   if (text === review.text) return review;
-  const history = [
-    ...review.history,
-    { text: review.text, suggestions: review.suggestions },
-  ].slice(-40);
+  const history = remember(review);
   const previous = review.history.findLast(
     (snapshot) => snapshot.text === text,
   );
   if (previous) return { ...previous, history };
-
   let map: (offset: number) => number;
   let changed: GhostSuggestion | undefined;
   let from = 0,
@@ -59,14 +137,11 @@ export function reconcileGhostReview(
     delta = 0;
   if (letters(text) === letters(review.text)) {
     const positions: number[] = [];
-    for (let index = 0; index < text.length; index++)
-      if (!whitespace(text[index])) positions.push(index);
+    for (let i = 0; i < text.length; i++)
+      if (!whitespace(text[i])) positions.push(i);
     const counts = [0];
-    for (const character of review.text) {
-      // Offsets remain UTF-16, matching CodeMirror and the model contract.
-      for (let i = 0; i < character.length; i++)
-        counts.push(counts.at(-1)! + (whitespace(character) ? 0 : 1));
-    }
+    for (let i = 0; i < review.text.length; i++)
+      counts.push(counts.at(-1)! + (whitespace(review.text[i]) ? 0 : 1));
     map = (offset) => {
       if (offset === 0) return 0;
       if (offset === review.text.length) return text.length;
@@ -74,8 +149,9 @@ export function reconcileGhostReview(
       if (!whitespace(review.text[offset]))
         return positions[count] ?? text.length;
       const end = count ? positions[count - 1] + 1 : 0;
-      if (!whitespace(review.text[offset - 1])) return end;
-      return Math.min(positions[count] ?? text.length, end + 1);
+      return !whitespace(review.text[offset - 1])
+        ? end
+        : Math.min(positions[count] ?? text.length, end + 1);
     };
   } else {
     const before = Array.from(review.text),
@@ -100,67 +176,75 @@ export function reconcileGhostReview(
     from = before.slice(0, start).join("").length;
     to = from + before.slice(start, endBefore).join("").length;
     delta = text.length - review.text.length;
-    const candidates = review.suggestions.filter(({ region }) => {
+    const contains = (region: GhostScope) => {
       let left = region.from,
         right = region.to;
       while (left > 0 && whitespace(review.text[left - 1])) left--;
       while (right < review.text.length && whitespace(review.text[right]))
         right++;
       return from >= left && to <= right;
-    });
+    };
+    const candidates = review.suggestions.filter((s) =>
+      s.regions.some(contains),
+    );
     if (candidates.length !== 1) return null;
     changed = candidates[0];
     map = (offset) =>
       offset <= from ? offset : offset >= to ? offset + delta : from;
   }
+  const touched = (range: GhostScope) => from <= range.to && to >= range.from;
+  const moveRange = (range: GhostScope, expand = false): GhostScope => ({
+    from: expand ? Math.min(range.from, from) : map(range.from),
+    to: expand ? Math.max(range.to, to) + delta : map(range.to),
+  });
   const suggestions = review.suggestions.map((suggestion) => {
-    const touched = suggestion === changed;
-    const changeFrom = touched
-      ? Math.min(suggestion.change.from, from)
-      : map(suggestion.change.from);
-    const changeTo = touched
-      ? Math.max(suggestion.change.to, to) + delta
-      : map(suggestion.change.to);
-    const editFrom = touched
-      ? Math.min(suggestion.edit.from, from)
-      : map(suggestion.edit.from);
-    const editTo = touched
-      ? Math.max(suggestion.edit.to, to) + delta
-      : map(suggestion.edit.to);
-    const before = text.slice(changeFrom, changeTo);
-    const resolved =
-      suggestion.resolved || touched || before === suggestion.change.after;
-    const change = {
-      ...suggestion.change,
-      from: changeFrom,
-      to: changeTo,
-      before,
+    const changedHere = suggestion === changed;
+    // Grammar fixes preserve reader feedback. Rephrasing its evidence requires
+    // the critic to read that passage again, rather than retain stale advice.
+    const staleFeedback =
+      suggestion.kind === "review" &&
+      changed?.kind === "style" &&
+      suggestion.anchors.some(touched);
+    const alternatives = suggestion.alternatives.map((option) => ({
+      ...option,
+      edits: option.edits.flatMap((edit) => {
+        const region = correctionRegion(review.text, edit);
+        if (changedHere && touched(region)) return [];
+        const change = minimalGhostEdit(edit);
+        const range = moveRange(edit),
+          minimal = moveRange(change);
+        const before = text.slice(range.from, range.to);
+        const after =
+          text.slice(range.from, minimal.from) +
+          change.after +
+          text.slice(minimal.to, range.to);
+        return before === after ? [] : [{ ...edit, ...range, before, after }];
+      }),
+    }));
+    const anchors = suggestion.anchors.map((a) => {
+      const range = moveRange(a, changedHere && touched(a));
+      return { ...range, quote: text.slice(range.from, range.to) };
+    });
+    const regions = suggestion.regions.map((r) =>
+      moveRange(r, changedHere && touched(r)),
+    );
+    return {
+      ...suggestion,
+      alternatives,
+      anchors,
+      regions,
+      resolved:
+        suggestion.resolved ||
+        staleFeedback ||
+        (suggestion.kind !== "review" &&
+          !alternatives[suggestion.selected]?.edits.length),
     };
-    const edit = {
-      ...suggestion.edit,
-      from: editFrom,
-      to: editTo,
-      before: text.slice(editFrom, editTo),
-      after:
-        text.slice(editFrom, changeFrom) +
-        change.after +
-        text.slice(changeTo, editTo),
-    };
-    const region = {
-      from: touched
-        ? Math.min(suggestion.region.from, from)
-        : map(suggestion.region.from),
-      to: touched
-        ? Math.max(suggestion.region.to, to) + delta
-        : map(suggestion.region.to),
-    };
-    return { ...suggestion, edit, change, region, resolved };
   });
   return { text, suggestions, history };
 }
 
-/** Playback runs backwards and reports completed corrections. Reconcile those
- * as complete transactions, never its transient erasure/retyping frames. */
+/** A completed playback may touch several occurrences of a single finding.
+ * Keep the group's initial state as one editor undo step, however many edits. */
 export function finishGhostReview(
   review: GhostReviewState,
   edits: GhostEdit[],
@@ -177,13 +261,5 @@ export function finishGhostReview(
     );
   }
   if (!next || next === review) return next;
-  // Fix all is one editor undo step, regardless of its correction count.
-  // Intermediate playback states must not crowd out the group's start.
-  return {
-    ...next,
-    history: [
-      ...review.history,
-      { text: review.text, suggestions: review.suggestions },
-    ].slice(-40),
-  };
+  return { ...next, history: remember(review) };
 }

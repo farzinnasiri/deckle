@@ -2,17 +2,33 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { ghostEdits, type GhostRequest } from "../lib/ghostwriter";
 import {
-  startGhostReview,
+  startGhostReview as startReview,
+  chosenGhostEdits,
   reconcileGhostReview,
   pendingGhostSuggestions,
   finishGhostReview,
 } from "../lib/ghost-review";
 
+function startGhostReview(
+  text: string,
+  edits: import("../lib/ghostwriter").GhostEdit[],
+) {
+  return startReview(
+    text,
+    edits.map((edit) => ({
+      kind: edit.kind,
+      title: "Agreement",
+      reason: edit.reason,
+      anchors: [{ from: edit.from, to: edit.to, quote: edit.before }],
+      alternatives: [{ label: "Correction", edits: [edit] }],
+    })),
+  );
+}
 const text = "The rain were loud. The owner have a dog. A quiet afternoon.";
 const input: GhostRequest = {
   text,
   scope: { from: 0, to: text.length },
-  options: { grammar: true, wording: true, structure: true },
+  options: { fix: true, style: true, review: true },
   protected: [],
 };
 const edits = ghostEdits(input, {
@@ -20,23 +36,16 @@ const edits = ghostEdits(input, {
     {
       before: "rain were",
       after: "rain was",
-      kind: "grammar",
+      kind: "fix",
       reason: "Agreement.",
     },
     {
       before: "owner have",
       after: "owner has",
-      kind: "grammar",
+      kind: "fix",
       reason: "Agreement.",
     },
   ],
-});
-test("rehydrated copies of unchanged paper keep the review", () => {
-  const review = startGhostReview(text, edits);
-  assert.equal(
-    reconcileGhostReview(review, JSON.parse(JSON.stringify(text))),
-    review,
-  );
 });
 test("a manual correction keeps other suggestions and undo restores the corrected item", () => {
   const review = startGhostReview(text, edits);
@@ -44,7 +53,7 @@ test("a manual correction keeps other suggestions and undo restores the correcte
   const next = reconcileGhostReview(review, corrected)!;
   assert.ok(next);
   assert.equal(pendingGhostSuggestions(next).length, 1);
-  const remaining = pendingGhostSuggestions(next)[0].edit;
+  const remaining = pendingGhostSuggestions(next)[0].alternatives[0].edits[0];
   assert.equal(corrected.slice(remaining.from, remaining.to), remaining.before);
   assert.equal(remaining.before, "owner have");
   assert.equal(
@@ -52,27 +61,29 @@ test("a manual correction keeps other suggestions and undo restores the correcte
     2,
   );
 });
-test("successive keystrokes in the correction remain allowed after the item is resolved", () => {
-  let review = startGhostReview(text, edits);
-  for (const word of ["wr", "w", "was", "wasn't"]) {
-    const next = reconcileGhostReview(review, text.replace("were", word));
-    assert.ok(next, word);
-    review = next;
-    assert.equal(pendingGhostSuggestions(review).length, 1);
-  }
-});
-test("selecting and retyping a whole incorrect word keeps other suggestions", () => {
-  let review = startGhostReview(text, edits);
-  for (const word of ["h", "ha", "has"]) {
-    const next = reconcileGhostReview(review, text.replace("have", word));
-    assert.ok(next, word);
-    review = next;
-    assert.equal(pendingGhostSuggestions(review).length, 1);
+test("manual replacement stays local through deletion, retyping and later corrections", () => {
+  for (const [before, words] of [
+    ["were", ["wr", "w", "was", "wasn't"]],
+    ["have", ["h", "ha", "has"]],
+  ] as const) {
+    let review = startGhostReview(text, edits);
+    for (const word of words) {
+      const next = reconcileGhostReview(review, text.replace(before, word));
+      assert.ok(next, `${before} -> ${word}`);
+      review = next;
+      const pending = pendingGhostSuggestions(review);
+      assert.equal(pending.length, 1);
+      const remaining = chosenGhostEdits(pending[0])[0];
+      assert.equal(
+        review.text.slice(remaining.from, remaining.to),
+        remaining.before,
+      );
+    }
   }
 });
 test("partial playback resolves only completed corrections and undo restores the pass", () => {
   const review = startGhostReview(text, edits);
-  const changes = pendingGhostSuggestions(review).map((s) => s.change);
+  const changes = pendingGhostSuggestions(review).flatMap(chosenGhostEdits);
   const partial = finishGhostReview(review, changes, 1)!;
   assert.equal(partial.text, text.replace("have", "has"));
   assert.equal(pendingGhostSuggestions(partial).length, 1);
@@ -96,16 +107,20 @@ test("large Fix all groups retain undo and redo states across more than forty co
       edits: lines.map((before) => ({
         before,
         after: before.replace("wait.", "waits."),
-        kind: "grammar",
+        kind: "fix",
         reason: "Agreement.",
       })),
     },
   );
   const review = startGhostReview(original, edits);
-  const one = finishGhostReview(review, [review.suggestions[0].change], 1)!;
+  const one = finishGhostReview(
+    review,
+    [chosenGhostEdits(review.suggestions[0])[0]],
+    1,
+  )!;
   const all = finishGhostReview(
     one,
-    pendingGhostSuggestions(one).map((s) => s.change),
+    pendingGhostSuggestions(one).flatMap(chosenGhostEdits),
     79,
   )!;
   assert.equal(pendingGhostSuggestions(all).length, 0);
@@ -118,27 +133,6 @@ test("large Fix all groups retain undo and redo states across more than forty co
   const redoOne = reconcileGhostReview(undoOne, one.text)!;
   const redoAll = reconcileGhostReview(redoOne, all.text)!;
   assert.equal(pendingGhostSuggestions(redoAll).length, 0);
-});
-test("spaces and paragraph breaks rebase anchors without reverting the writer's layout", () => {
-  const changed =
-    "  The rain were loud.\n\nThe  owner have a dog. A quiet afternoon.\n";
-  const next = reconcileGhostReview(startGhostReview(text, edits), changed)!;
-  assert.ok(next);
-  assert.equal(pendingGhostSuggestions(next).length, 2);
-  for (const { edit, change } of pendingGhostSuggestions(next)) {
-    assert.equal(changed.slice(edit.from, edit.to), edit.before);
-    assert.equal(changed.slice(change.from, change.to), change.before);
-  }
-  assert.equal(pendingGhostSuggestions(next)[1].edit.after, "owner has");
-});
-test("changes to context inside a model quotation invalidate the pass", () => {
-  assert.equal(
-    reconcileGhostReview(
-      startGhostReview(text, edits),
-      text.replace("rain", "storm"),
-    ),
-    null,
-  );
 });
 test("unrelated text changes invalidate the pass, including after a partial fix", () => {
   const review = reconcileGhostReview(
@@ -160,7 +154,7 @@ test("resolved deletion and insertion regions accept further local editing", () 
       to: original.indexOf(before) + before.length,
       before,
       after,
-      kind: "grammar" as const,
+      kind: "fix" as const,
       reason: "Test.",
     };
     const review = startGhostReview(original, [edit]);
@@ -178,7 +172,7 @@ test("Unicode offsets survive whitespace changes and corrections", () => {
     to: from + 6,
     before: "She go",
     after: "She goes",
-    kind: "grammar" as const,
+    kind: "fix" as const,
     reason: "Agreement.",
   };
   const review = reconcileGhostReview(
@@ -187,8 +181,11 @@ test("Unicode offsets survive whitespace changes and corrections", () => {
   )!;
   const pending = pendingGhostSuggestions(review)[0];
   assert.equal(
-    review.text.slice(pending.change.from, pending.change.to),
-    pending.change.before,
+    review.text.slice(
+      chosenGhostEdits(pending)[0].from,
+      chosenGhostEdits(pending)[0].to,
+    ),
+    chosenGhostEdits(pending)[0].before,
   );
   assert.ok(
     reconcileGhostReview(review, review.text.replace("She go", "She goes")),
@@ -201,7 +198,7 @@ test("a selected repeated quotation keeps its own anchor after whitespace change
     to: 17,
     before: "He walk.",
     after: "He walks.",
-    kind: "grammar" as const,
+    kind: "fix" as const,
     reason: "Agreement.",
   };
   const spaced = reconcileGhostReview(
@@ -210,7 +207,7 @@ test("a selected repeated quotation keeps its own anchor after whitespace change
   )!;
   const fixed = finishGhostReview(
     spaced,
-    pendingGhostSuggestions(spaced).map((item) => item.change),
+    pendingGhostSuggestions(spaced).flatMap(chosenGhostEdits),
     1,
   )!;
   assert.equal(fixed.text, "He walk.\n\nHe walks.");

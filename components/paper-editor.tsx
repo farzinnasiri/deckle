@@ -195,6 +195,7 @@ type Props = {
   onFormat: (command: FormatCommand) => Document;
   onSelection: (selection: TextSelection) => void;
   onMetrics: (metrics: PaperMetrics, reason: MeasureReason) => void;
+  onSelectionFeed: (lines: number) => void;
   onFocus: () => void;
   onStrike: (x: number) => void;
   onLineLimit: () => void;
@@ -1269,17 +1270,124 @@ export const PaperEditor = forwardRef<EditorHandle, Props>(
         annotations: external.of(true),
       });
       measureRef.current("layout");
+      // The paper is a translated strip, not a native scroll container.
+      // Keep CodeMirror's selection anchor while feeding under a held mouse.
+      let selectionDrag: {
+        x: number;
+        y: number;
+        startX: number;
+        startY: number;
+        anchor: number;
+        moved: boolean;
+      } | null = null;
+      let selectionFrame = 0,
+        selectionTime = 0;
+      const stopSelectionDrag = () => {
+        selectionDrag = null;
+        cancelAnimationFrame(selectionFrame);
+        selectionFrame = 0;
+      };
+      const feedSelection = (time: number) => {
+        if (!selectionDrag || latest.current.disabled) {
+          stopSelectionDrag();
+          return;
+        }
+        const elapsed = Math.min(40, time - selectionTime);
+        selectionTime = time;
+        const box = view.dom.closest(".paper-window")?.getBoundingClientRect();
+        const machine = view.dom
+          .closest(".instrument")
+          ?.querySelector(".machine")
+          ?.getBoundingClientRect();
+        if (box && selectionDrag.moved && !view.state.selection.main.empty) {
+          const top = box.top + 12;
+          const bottom = Math.min(box.bottom, machine?.top ?? box.bottom) - 12;
+          const y = selectionDrag.y;
+          const direction = y < top + 20 ? -1 : y > bottom - 20 ? 1 : 0;
+          if (direction && bottom > top) {
+            const x = Math.max(
+              box.left + 2,
+              Math.min(box.right - 2, selectionDrag.x),
+            );
+            const head = view.posAtCoords({
+              x,
+              y: Math.max(top, Math.min(bottom, y)),
+            });
+            // paperY includes -headTop. Pointer compensation cancels the
+            // caret's movement so only onSelectionFeed advances the roll.
+            // Treating this as layout instead makes edge feeding accelerate.
+            if (head !== null && head !== view.state.selection.main.head)
+              view.dispatch({
+                selection: { anchor: selectionDrag.anchor, head },
+                userEvent: "select.pointer",
+              });
+            latest.current.onSelectionFeed(((direction * elapsed) / 1000) * 10);
+          }
+        }
+        selectionFrame = requestAnimationFrame(feedSelection);
+      };
+      const startSelectionDrag = (event: MouseEvent) => {
+        if (
+          event.button !== 0 ||
+          latest.current.disabled ||
+          (event.target as Element).closest("[data-ghost-suggestion]")
+        )
+          return;
+        stopSelectionDrag();
+        selectionDrag = {
+          x: event.clientX,
+          y: event.clientY,
+          startX: event.clientX,
+          startY: event.clientY,
+          anchor: view.state.selection.main.anchor,
+          moved: false,
+        };
+        selectionTime = performance.now();
+        selectionFrame = requestAnimationFrame(feedSelection);
+      };
+      const moveSelectionDrag = (event: MouseEvent) => {
+        if (!selectionDrag) return;
+        if (!(event.buttons & 1)) {
+          stopSelectionDrag();
+          return;
+        }
+        if (
+          !selectionDrag.moved &&
+          Math.hypot(
+            event.clientX - selectionDrag.startX,
+            event.clientY - selectionDrag.startY,
+          ) >= 4
+        ) {
+          selectionDrag.anchor = view.state.selection.main.anchor;
+          selectionDrag.moved = true;
+        }
+        selectionDrag.x = event.clientX;
+        selectionDrag.y = event.clientY;
+      };
+      view.contentDOM.addEventListener("mousedown", startSelectionDrag);
+      document.addEventListener("mousemove", moveSelectionDrag);
+      document.addEventListener("mouseup", stopSelectionDrag);
+      window.addEventListener("blur", stopSelectionDrag);
+      view.contentDOM.addEventListener("dragstart", stopSelectionDrag);
       const resize = new ResizeObserver(() => measureRef.current("layout"));
       resize.observe(view.contentDOM);
       return () => {
         interruptGhost.current();
+        stopSelectionDrag();
+        view.contentDOM.removeEventListener("mousedown", startSelectionDrag);
+        document.removeEventListener("mousemove", moveSelectionDrag);
+        document.removeEventListener("mouseup", stopSelectionDrag);
+        window.removeEventListener("blur", stopSelectionDrag);
+        view.contentDOM.removeEventListener("dragstart", stopSelectionDrag);
         resize.disconnect();
         view.destroy();
         viewRef.current = null;
       };
     }, []);
 
-    useEffect(() => {
+    // Publish parent snapshots before the next mechanical keystroke. A passive
+    // effect can replay an older snapshot between two erasures and corrupt ink.
+    useLayoutEffect(() => {
       const view = viewRef.current;
       if (!view) return;
       const changedPiece = previousPiece.current !== props.pieceId;

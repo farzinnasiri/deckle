@@ -13,7 +13,7 @@ Start writing without an account. Your desk saves in this browser. Sign in when 
 - Choose a machine, paper, desk surface, clock, and lighting. New desks start with Cherry and the lights on. Saved choices stay yours.
 - An optional guided setup introduces the desk, lamps, Notes drawer, daily writing battery, and text selection.
 - Type and edit anywhere on the paper. Draft corrections erase; Ink corrections preserve the original marks.
-- Accounts enabled through [feature flags](docs/feature-flags.md) can ask Ghostwriter to check grammar or wording, or explicitly permit structure changes. Review suggestions beside the paper, then Fix one or Fix all through the machine. Local corrections retain other suggestions; unrelated wording changes clear the pass. Undo restores the last fix or group. [Ghostwriter behavior and setup](docs/ghostwriter.md).
+- Accounts enabled through [feature flags](docs/feature-flags.md) can ask Ghostwriter for Fixes, optional Style alternatives, and read-only Review feedback. A proof tape beside the paper offers Apply, Apply all, and Dismiss. Bulk application uses your chosen wording or the recommended alternative. Local corrections retain other findings; unrelated wording changes clear the pass. Undo restores the last correction or group. [Ghostwriter behavior and setup](docs/ghostwriter.md).
 - Tear and file finished papers, search the archive, read a paper, or replay its writing history.
 - Export Markdown, printable papers, share images, or a complete archive including replay logs. Import an archive to move writing between browsers.
 - Local writing saves to IndexedDB. Cloud mode keeps a browser copy and queues offline changes for the next connection. Conflicting versions are preserved for you to combine.
@@ -34,7 +34,7 @@ Fill in your own Clerk development keys in `.env.local`. Clerk is required for t
 
 Cloud storage also needs a Convex project. Run `npx convex dev` to create or link a development deployment. Set the same randomly generated `DECKLE_BRIDGE_SECRET` in `.env.local` and Convex, and set `NEXT_PUBLIC_CONVEX_SITE_URL` to that deployment's HTTP site URL. Set `APP_URL` to your local app origin.
 
-The optional `make dev` command uses [Portless](https://github.com/vercel-labs/portless) to serve `https://deckle.localhost`. It replaces only this checkout's existing Deckle development servers.
+The optional `make dev` command uses [Portless](https://github.com/vercel-labs/portless) to serve `https://deckle.localhost`. It replaces only this checkout's existing Deckle development servers. During development, origin validation uses Portless's `PORTLESS_URL` automatically; direct `npm run dev` uses `APP_URL`.
 
 ```sh
 npm test

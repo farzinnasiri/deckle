@@ -15,13 +15,13 @@ import { editingText } from "../lib/editor-model";
 const input = (text: string): GhostRequest => ({
   text,
   scope: { from: 0, to: text.length },
-  options: { grammar: true, wording: true, structure: false },
+  options: { fix: true, style: true, review: false },
   protected: [],
 });
 const suggestion = (before: string, after: string) => ({
   before,
   after,
-  kind: "grammar",
+  kind: "fix",
   reason: "Fix agreement.",
 });
 test("plans anchor exact quotations within the selected passage and reject guesses", () => {
@@ -59,7 +59,7 @@ test("plans reject overlapping edits, clippings and disabled categories", () => 
         edits: [
           {
             ...suggestion("A badly writen line.", "A line, badly written."),
-            kind: "structure",
+            kind: "review",
           },
         ],
       }),
@@ -83,20 +83,17 @@ test("plans reject overlapping edits, clippings and disabled categories", () => 
     /without permission/,
   );
 });
-test("a complete 120-line paper can return a correction on every line", () => {
-  const lines = Array.from(
-    { length: 120 },
-    (_, index) => `Line ${index + 1}: She walk home.`,
-  );
-  const request = ghostRequest(input(lines.join("\n")));
-  const edits = ghostEdits(request, {
-    edits: lines.map((line) => suggestion(line, line.replace("walk", "walks"))),
-  });
-  assert.equal(edits.length, 120);
-  for (const [index, edit] of edits.entries()) {
-    assert.equal(request.text.slice(edit.from, edit.to), lines[index]);
-    assert.equal(edit.after, lines[index].replace("walk", "walks"));
-  }
+test("insertions at either protected clipping boundary are rejected", () => {
+  const request = input("Hello \nQUOTE\n end");
+  request.protected = [{ from: 7, to: 12 }];
+  for (const [before, after] of [
+    ["Hello \n", "Hello \n!"],
+    ["\n end", ",\n end"],
+  ])
+    assert.throws(
+      () => ghostEdits(request, { edits: [suggestion(before, after)] }),
+      /clipping/,
+    );
 });
 test("requests enforce text, scope and explicit editing choices", () => {
   for (const value of [
@@ -107,7 +104,7 @@ test("requests enforce text, scope and explicit editing choices", () => {
     { ...input("a"), scope: { from: -1, to: 1 } },
     {
       ...input("a"),
-      options: { grammar: false, wording: false, structure: false },
+      options: { fix: false, style: false, review: false },
     },
   ])
     assert.throws(() => ghostRequest(value));
@@ -116,7 +113,7 @@ test("requests enforce text, scope and explicit editing choices", () => {
 test("minimal changes preserve identical ink and keep Unicode code points whole", () => {
   const edit: GhostEdit = {
     ...suggestion("A 😁 day", "A 😄 day"),
-    kind: "wording",
+    kind: "style",
     from: 5,
     to: 13,
   };
@@ -146,7 +143,7 @@ test("review highlights changed ink and anchors missing text without splitting U
   assert.deepEqual(
     ghostHighlight({
       ...suggestion("😁", "😁!"),
-      kind: "grammar",
+      kind: "fix",
       from: 0,
       to: 2,
     }),
@@ -305,8 +302,8 @@ test("interrupting mid-erasure restores the passage before human input continues
 test("interruption retains completed passages and restores only the active passage", async () => {
   const request = input("bad. bad.");
   const edits: GhostEdit[] = [
-    { ...suggestion("bad.", "good."), kind: "wording", from: 0, to: 4 },
-    { ...suggestion("bad.", "good."), kind: "wording", from: 5, to: 9 },
+    { ...suggestion("bad.", "good."), kind: "style", from: 0, to: 4 },
+    { ...suggestion("bad.", "good."), kind: "style", from: 5, to: 9 },
   ];
   const desk = paper(request.text),
     controller = new AbortController();
@@ -325,7 +322,7 @@ test("playback refuses stale anchors and changes that exceed paper capacity", as
   const desk = paper("now changed");
   const edit: GhostEdit = {
     ...suggestion("old", "new"),
-    kind: "wording",
+    kind: "style",
     from: 0,
     to: 3,
   };

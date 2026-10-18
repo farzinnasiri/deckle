@@ -119,17 +119,20 @@ test("title, blocks, initials, materials and stamp survive replay without changi
   assert.deepEqual(replay(JSON.parse(JSON.stringify(events))), doc);
 });
 test("typed heading conventions derive headings and dinkus without duplicating export prefixes", () => {
-  const doc = edit(empty(), "# First\n## Second\n***\nbody");
+  const doc = edit(empty(), "# First\n## Second\n### Third\n***\nbody");
   assert.deepEqual(
     documentLines(doc).map((l) => l.block),
-    ["h1", "h2", "dinkus", "body"],
+    ["h1", "h2", "h2", "dinkus", "body"],
   );
   const formatted = applyEvent(doc, {
     ...makeEvent("style", "", "draft"),
     range: { from: 2, to: 7 },
     style: { strike: "double" },
   });
-  assert.equal(markdown(formatted), "# **First**\n## Second\n***\nbody");
+  assert.equal(
+    markdown(formatted),
+    "# **First**\n## Second\n## Third\n***\nbody",
+  );
 });
 test("stamp appearance is deterministic and varies with its saved seed", () => {
   assert.deepEqual(

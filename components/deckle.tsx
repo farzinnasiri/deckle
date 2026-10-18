@@ -2540,6 +2540,10 @@ export default function Deckle({
                           onRestore={restoreEditing}
                           onSelection={rememberSelection}
                           onMetrics={paperMetrics}
+                          onSelectionFeed={(lines) => {
+                            setRollKind("scroll");
+                            roll(feedRef.current - lines, false);
+                          }}
                           onStrike={(x) =>
                             setTypebarStrike((previous) => ({
                               id: previous.id + 1,
